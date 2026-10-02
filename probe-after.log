@@ -1,0 +1,9 @@
+== after first answer (page shows it: true)
+api: omo-transcript turns=1 text="Reply with exactly: probe-ok-1"
+chat:  Optimized system prompt applied: claude-opus-5-5 Tip: Prefix a prompt with ! to run bash, or !! to run bash without adding its output to model context. ↳ Want the full story on any tip? Ask about it — the give-me-tips skill has the tour. [Skills] archify, aside-win, computer-use, general-video, god-tibo-imagen, gws-calendar, gws-chat, gws-docs, gws-drive, gws-events, gws-forms, gws-gmail, gws-script, gws-shared, gws-sheets, gws-slides, gws-tasks, hyperframes, hyperframes-animation, hyperframes-audio, hyperframes-cli, hyperframes-core, hyperframes-creative, hyperframes-keyframes, hyperframes-r
+
+== after /new, nothing typed (api followed: true)
+api: scrollback turns=0 text=""
+page still shows probe-ok-1: false
+chat: Conversation unavailable — show terminal output Omo · DONE Background tasks
+

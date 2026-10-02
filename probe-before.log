@@ -1,0 +1,9 @@
+== after first answer (page shows it: true)
+api: omo-transcript turns=1 text="Reply with exactly: probe-ok-1"
+chat: Reply with exactly: probe-ok-1 03:08 AM Omo · RUN Background tasks claude-opus-5-5 Reasoning medium Queue
+
+== after /new, nothing typed (api followed: false)
+api: omo-transcript turns=1 text="Reply with exactly: probe-ok-1"
+page still shows probe-ok-1: true
+chat: Reply with exactly: probe-ok-1 03:08 AM Omo · DONE Background tasks claude-opus-5-5 Reasoning medium
+
