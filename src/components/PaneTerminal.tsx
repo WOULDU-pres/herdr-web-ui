@@ -723,7 +723,17 @@ export function PaneTerminal({
 
     const poll = window.setInterval(() => setConnected(socket.connected), 1000);
 
+    // Let xterm finish pending IME text before remapping the key's following data.
+    // Cmd+Backspace uses the terminal's Ctrl+U line-deletion shortcut on macOS.
+    let commandBackspace = false;
+    const onCommandBackspace = term.onKey(({ key, domEvent: event }) => {
+      commandBackspace = !term.options.disableStdin && isMac && key === "\x7f" && event.type === "keydown"
+        && event.key === "Backspace" && event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey
+        && !event.isComposing && event.keyCode !== 229;
+    });
     const onData = term.onData((data) => {
+      if (commandBackspace && data === "\x7f") data = "\x15";
+      commandBackspace = false;
       const current = paneRef.current;
       if (!current || observeRef.current || secretRef.current !== null || heldRef.current) return;
       if (!socket.connected) {
@@ -913,6 +923,7 @@ export function PaneTerminal({
       selectionChange.dispose();
       window.removeEventListener("focus", refit);
       document.removeEventListener("visibilitychange", onVisible);
+      onCommandBackspace.dispose();
       onData.dispose();
       host.removeEventListener("paste", onFilePaste, { capture: true });
       host.removeEventListener("dragover", onDragOver);

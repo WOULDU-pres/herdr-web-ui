@@ -15,6 +15,10 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
   remembered pane views on this device. Shell panes still open in Terminal.
   ([#325](https://github.com/devswha/herdr-web-ui/pull/325) by @Haeminway1)
 
+### Fixed
+- Cmd+Backspace on macOS sends Ctrl+U in the live terminal, deleting the input back to
+  the start of the line instead of a single character. Pending IME text keeps its order.
+
 ## [0.3.43] - 2026-10-02
 
 ### Changed
