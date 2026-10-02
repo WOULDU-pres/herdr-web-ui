@@ -16,15 +16,15 @@ PASS plan meters beside Settings: accounts, order, hiding, used or left, overflo
 PASS plan meters at the top of the list: one poller, accounts apart, phone fit, open panel leaves the PCs room, back beside Settings
 PASS notification startup: real worker messages retain the newest pane before App subscribes
 PASS viewport contract: idle, keyboard resize, field handoff, blur, rotation, xterm modes and pointer changes
+PASS one choice in Settings opens every agent pane in the chat
 PASS the message box keeps its focus and takes dictated text while the socket reconnects
 PASS no in-app alert for the open pane
-prompt: claude pane w6:p1 is blocked on a screen no reader knows; fallback card (2 options)
-prompt: claude pane w7:p1 is blocked on a screen no reader knows; fallback card (2 options)
+prompt: claude pane wH:p1 is blocked on a screen no reader knows; fallback card (2 options)
+prompt: claude pane wJ:p1 is blocked on a screen no reader knows; fallback card (2 options)
 PASS an in-app alert drops in for another pane, and a tap opens it
 PASS a flick up puts an in-app alert away
 PASS an in-app alert goes by itself
 PASS in-app alerts turned off stay off
-prompt: claude pane w2:p1 is blocked on a screen no reader knows; fallback card (2 options)
 PASS queue held through status changes and explicitly sent to its owner
 PASS quick replies send as typed, queue mid-turn, and leave the draft
 PASS the composer keeps an IME's committing Enter

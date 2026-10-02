@@ -1,6 +1,6 @@
 Shift+Enter live-terminal regression
 Base: devswha/herdr-web-ui main / v0.3.43 (1608cce)
-Fix: 97f5e48
+Fix: fafc3a5
 Environment: Linux (WSL), herdr 0.9.3, Bun 1.4.2, Playwright Chromium 153
 
 Actual browser keyboard events -> WebSocket input -> isolated raw-mode PTY:
@@ -14,7 +14,7 @@ Checks:
 bun run generate:types --check: PASS
 bun run typecheck: PASS
 bun run build: PASS
-bun run test:unit: 1034 pass, 2 skip, 0 fail
+bun run test:unit: 1036 pass, 3 skip, 0 fail
 bun scripts/ui-regression.ts: PASS (the lockfile's Playwright Chromium)
 
 Browser regression excerpt:
