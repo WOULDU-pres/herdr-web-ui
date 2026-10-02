@@ -727,7 +727,7 @@ export function PaneTerminal({
     // key's onData. Remap only that CR, preserving composition text and its order.
     let shiftEnter = false;
     const onShiftEnter = term.onKey(({ key, domEvent: event }) => {
-      shiftEnter = key === "\r" && event.key === "Enter" && event.shiftKey
+      shiftEnter = !term.options.disableStdin && key === "\r" && event.key === "Enter" && event.shiftKey
         && !event.ctrlKey && !event.altKey && !event.metaKey && !event.isComposing && event.keyCode !== 229;
     });
     const onData = term.onData((data) => {
