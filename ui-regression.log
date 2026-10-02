@@ -1,5 +1,7 @@
 PASS delayed machines poll preserves newer streamed pane status
 PASS terminal path drop, native path paste and JSON file drop/paste
+PASS terminal Shift+Enter sends a newline chord once and preserves Enter, Alt+Enter and IME
+PASS pending IME commit precedes Shift+Enter without duplicate text
 PASS terminal clipboard paste sends text once and preserves Ctrl+C
 PASS settings shortcut and theme
 PASS the bell turns alerts off and on again
@@ -41,6 +43,8 @@ PASS Send now on a queued message drops Claude's suggestion
 PASS mobile composer with unavailable storage and no horizontal overflow
 PASS a pane picked on a phone waits for a tap before raising the keyboard
 PASS a phone offers Claude's suggestion as a chip only once Settings turns it on
+PASS xterm composition: local preedit, delayed multi-commit burst, punctuation order, Korean final-consonant movement, pane-reset cancellation
+PASS terminal input: desktop mode, owner drafts, reload, IME button, late ack, shortcuts, readiness, explicit send
 PASS touch terminal input line sends whole lines, Enter alone, and yields to direct typing
 PASS closed and obsolete saved panes recover their selection
 PASS token and paired-device sign out return to the access gate
