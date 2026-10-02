@@ -147,6 +147,13 @@ export async function checkTerminalInput(browser: Browser, origin: string, pane:
     await input.dispatchEvent("compositionend", { data: "한" });
     await until(() => sent.length > imeBefore);
     assert.equal(sent.slice(imeBefore).map((frame) => frame.text).join(""), "한");
+    // Native Gboard emits Backspace while xterm retains the previous DOM text. The
+    // next IME session must start with a fresh scratch editor, not that stale context.
+    await input.evaluate((element) => { const box = element as HTMLTextAreaElement; box.value = "가나다 "; box.setSelectionRange(4, 4); });
+    const deletionBefore = sent.length;
+    await input.press("Backspace");
+    assert.equal(await input.inputValue(), "", "non-composing Backspace resets stale IME context");
+    assert.equal(sent.slice(deletionBefore).map((frame) => frame.text).join(""), "\x7f");
     const burstBefore = sent.length;
     await input.evaluate((element) => {
       const box = element as HTMLTextAreaElement;

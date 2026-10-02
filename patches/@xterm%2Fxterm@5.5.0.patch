@@ -1,5 +1,5 @@
 diff --git a/src/browser/Terminal.ts b/src/browser/Terminal.ts
-index 0e945aa92b34cead9a28edb0e56d894f58ed9b51..edc02bcd98d0fc3e80a571065131046f166f6b3e 100644
+index 0e945aa92b34cead9a28edb0e56d894f58ed9b51..d0919c300bbba9a67b85331876aa09f473dae101 100644
 --- a/src/browser/Terminal.ts
 +++ b/src/browser/Terminal.ts
 @@ -485,6 +485,7 @@ export class Terminal extends CoreTerminal implements ITerminal {
@@ -8,9 +8,32 @@ index 0e945aa92b34cead9a28edb0e56d894f58ed9b51..edc02bcd98d0fc3e80a571065131046f
      this._compositionHelper = this._instantiationService.createInstance(CompositionHelper, this.textarea, this._compositionView);
 +    this.register(toDisposable(() => this._compositionHelper?.reset()));
      this._helperContainer.appendChild(this._compositionView);
- 
+
      this._mouseService = this._instantiationService.createInstance(MouseService);
-@@ -1251,6 +1252,7 @@ export class Terminal extends CoreTerminal implements ITerminal {
+@@ -1009,6 +1010,7 @@ export class Terminal extends CoreTerminal implements ITerminal {
+     // Ignore composing with Alt key on Mac when macOptionIsMeta is enabled
+     const shouldIgnoreComposition = this.browser.isMac && this.options.macOptionIsMeta && event.altKey;
+
++    const wasComposing = this._compositionHelper?.isComposing === true;
+     if (!shouldIgnoreComposition && !this._compositionHelper!.keydown(event)) {
+       if (this.options.scrollOnUserInput && this.buffer.ybase !== this.buffer.ydisp) {
+         this.scrollToBottom();
+@@ -1063,7 +1065,13 @@ export class Terminal extends CoreTerminal implements ITerminal {
+     // If ctrl+c or enter is being sent, clear out the textarea. This is done so that screen readers
+     // will announce deleted characters. This will not work 100% of the time but it should cover
+     // most scenarios.
+-    if (result.key === C0.ETX || result.key === C0.CR) {
++    // Gboard expects a Backspace to update its editor. We send DEL to the PTY and
++    // cancel the DOM edit, so retaining this text leaves its next composition using
++    // stale surrounding text (e.g. 한글 becomes ㅎㅏㄴ글 after deleting). Reset the
++    // scratch editor only outside composition; screen readers own their DOM edits.
++    const clearAfterBackspace = event.keyCode === 8 && !wasComposing && !event.isComposing
++      && !this.optionsService.rawOptions.screenReaderMode;
++    if (result.key === C0.ETX || result.key === C0.CR || clearAfterBackspace) {
+       this.textarea!.value = '';
+     }
+
+@@ -1251,6 +1259,7 @@ export class Terminal extends CoreTerminal implements ITerminal {
     * using DECSTR (soft reset, CSI ! p) or RIS instead (hard reset, ESC c).
     */
    public reset(): void {
@@ -24,7 +47,7 @@ index 9ebc55d96f328720dcb87cc31147c6d5a76ebebe..2470773ba1cf2a80c8897ab67ac99158
 +++ b/src/browser/Types.d.ts
 @@ -36,6 +36,7 @@ export type CustomWheelEventHandler = (event: WheelEvent) => boolean;
  export type LineData = CharData[];
- 
+
  export interface ICompositionHelper {
 +  reset(): void;
    readonly isComposing: boolean;
@@ -37,7 +60,7 @@ index 7542969a62fa6b5e84471a3bdecdc4bec82de542..95aed7468ad64e21b0332a3e9b66c606
 @@ -30,11 +30,10 @@ export class CompositionHelper {
     */
    private _compositionPosition: IPosition;
- 
+
 -  /**
 -   * Whether a composition is in the process of being sent, setting this to false will cancel any
 -   * in-progress composition.
@@ -47,7 +70,7 @@ index 7542969a62fa6b5e84471a3bdecdc4bec82de542..95aed7468ad64e21b0332a3e9b66c606
 +  private readonly _pendingSends: (() => void)[] = [];
 +  private _sentUpTo = 0;
 +  private _generation = 0;
- 
+
    /**
     * Data already sent due to keydown event.
 @@ -50,17 +49,30 @@ export class CompositionHelper {
@@ -58,7 +81,7 @@ index 7542969a62fa6b5e84471a3bdecdc4bec82de542..95aed7468ad64e21b0332a3e9b66c606
      this._compositionPosition = { start: 0, end: 0 };
      this._dataAlreadySent = '';
    }
- 
+
 +  /** A reset/disposal must not forward an old pane's deferred input into its replacement. */
 +  public reset(): void {
 +    this._generation++;
@@ -103,7 +126,7 @@ index 7542969a62fa6b5e84471a3bdecdc4bec82de542..95aed7468ad64e21b0332a3e9b66c606
 +    if (!this._isComposing) return;
      this._finalizeComposition(true);
    }
- 
+
 @@ -92,7 +108,7 @@ export class CompositionHelper {
     * @returns Whether the Terminal should continue processing the keydown event.
     */
@@ -115,7 +138,7 @@ index 7542969a62fa6b5e84471a3bdecdc4bec82de542..95aed7468ad64e21b0332a3e9b66c606
          return false;
 @@ -129,52 +145,40 @@ export class CompositionHelper {
      this._isComposing = false;
- 
+
      if (!waitForPropagation) {
 -      // Cancel any delayed composition send requests and send the input immediately.
 -      this._isSendingComposition = false;
@@ -181,7 +204,7 @@ index 7542969a62fa6b5e84471a3bdecdc4bec82de542..95aed7468ad64e21b0332a3e9b66c606
        }, 0);
      }
    }
- 
+
 +  private _sliceUnsent(start: number, end: number): string {
 +    const from = Math.max(start, this._sentUpTo);
 +    const to = Math.max(from, end);

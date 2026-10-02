@@ -75,9 +75,13 @@ trips and pane changes on those keyboards before claiming universal IME compatib
   5.5.0 and is maintained here pending an upstream release. Reset/disposal also invalidate deferred
   composition work so old input cannot enter a newly selected pane. The app resets in a layout
   effect, before another task can deliver the previous pane's commit.
-- [xterm #3600](https://github.com/xtermjs/xterm.js/issues/3600) and
-  [#6078](https://github.com/xtermjs/xterm.js/issues/6078): Android editing and stale textarea
-  re-emission reports remain relevant real-device regression cases, not confirmed diagnoses here.
+- Related to [xterm #3600](https://github.com/xtermjs/xterm.js/issues/3600), native Gboard testing
+  reproduced stale editor context after Backspace: `가나다 `, two deletes, then `한글` + Enter
+  delivered `가나다 \x7f\x7fㅎㅏㄴ글\r`. Clearing the scratch editor on non-composing Backspace
+  fixes this case; active compositions and screen-reader mode retain their existing editor behavior.
+  This does not declare every case in that umbrella issue resolved.
+- [xterm #6078](https://github.com/xtermjs/xterm.js/issues/6078), broader stale-text re-emission,
+  remains a separate regression target; this change does not claim to resolve all its triggers.
 - [#6084 was retracted](https://github.com/xtermjs/xterm.js/issues/6084#issuecomment-5162622279):
   the reporter identified a missing UTF-8 locale and a harmful custom IME bridge. Do not adopt that
   workaround. Check the spawned session's locale when bytes are corrupted downstream; do not
@@ -95,3 +99,38 @@ inside Tailscale, passed Unicode text entry, draft reload, direct/line mode swit
 batched composition regression (`["니", "다", "."]`). The Safari WebDriver session used an
 owned test workspace and was deleted afterward. These checks use WebDriver text entry and
 synthetic composition events; they do not certify a physical Korean IME or an iOS keyboard.
+
+### Native Android/Gboard check
+
+On 2026-10-03, an Android 16 Google Play x86_64 emulator (API 36 revision 7, Pixel 7,
+1080×2400 at 420 dpi) ran Chrome **133.0.6943.137** and Gboard
+**15.1.08.726012951-preload-x86_64**, with Korean two-bulsik selected. These are the system
+image's bundled versions, not a claim about the newest Android Chrome/Gboard releases.
+
+`scripts/android-ime-regression.ts` taps Gboard's actual on-screen keys through ADB; it does
+not inject text or composition events for the typing assertions. A plain HTML textarea is the
+control, followed by the app's input line and direct terminal. The direct-input oracle is the
+raw bytes received by a Node capture process in an owned herdr workspace.
+
+Passed: `한글 ` in the input line, reload persistence, direct word commits, final-consonant
+movement (`값` + `아` → `갑사`), Backspace during composition, and three repetitions of
+`가나다 ` → Backspace twice → `한글` → Enter. Before the Backspace fix, the last sequence
+failed twice; the integrated build produced the exact expected bytes in every recorded trial.
+The initial Gboard language-model download must finish before testing: a plain textarea that
+only produces compatibility jamo is a fixture failure, not evidence of an app defect. Restart
+Gboard after that download if necessary.
+
+To repeat, boot an owned emulator with the same screen geometry, choose Korean two-bulsik in
+Gboard, enable Chrome command-line support, build the app, then run:
+
+```sh
+ANDROID_IME_SERIAL=emulator-5580 \
+ANDROID_ADB=/path/to/android-sdk/platform-tools/adb \
+UI_EVIDENCE_DIR=/tmp/herdr-android-evidence \
+bun scripts/android-ime-regression.ts
+```
+
+The script refuses physical-device serials, creates and closes its own workspace/server and
+reverse forwarding, and saves native screenshots plus event evidence when requested. The caller
+owns emulator startup/shutdown. Samsung Keyboard, newer Gboard/Chrome builds, iOS keyboards,
+voice recognition and foldable posture still require separate checks.
