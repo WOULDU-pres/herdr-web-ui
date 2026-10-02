@@ -1,0 +1,39 @@
+PASS delayed machines poll preserves newer streamed pane status
+PASS terminal path drop, native path paste and JSON file drop/paste
+207 |     textarea.dispatchEvent(new KeyboardEvent("keydown", enter));
+208 |     textarea.dispatchEvent(new KeyboardEvent("keyup", enter));
+209 |   });
+210 |   await until(() => inputs.length >= beforeCommittedIme + 2, "IME commit followed by Shift+Enter");
+211 |   await page.waitForTimeout(NO_SEND_WAIT_MS);
+212 |   assert.deepEqual(inputs.slice(beforeCommittedIme).map(({ pane_id, text }) => ({ pane_id, text })),
+               ^
+AssertionError: a pending IME commit must precede Shift+Enter without a delayed duplicate
++ actual - expected
+
+  [
+    {
+      pane_id: 'w2:p1',
++     text: '\x1B\r'
+-     text: '한'
+    },
+    {
+      pane_id: 'w2:p1',
++     text: '한'
+-     text: '\x1B\r'
+    }
+  ]
+
+ generatedMessage: false,
+     actual: [
+  [Object ...], [Object ...]
+],
+   expected: [
+  [Object ...], [Object ...]
+],
+   operator: "deepStrictEqual",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at scripts/ui-regression.ts:212:10
+
+Bun v1.4.2 (Linux x64)

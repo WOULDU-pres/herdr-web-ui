@@ -1,6 +1,6 @@
 Shift+Enter live-terminal regression
 Base: devswha/herdr-web-ui main / v0.3.43 (1608cce)
-Fix: 31b5569
+Fix: 97f5e48
 Environment: Linux (WSL), herdr 0.9.3, Bun 1.4.2, Playwright Chromium 153
 
 Actual browser keyboard events -> WebSocket input -> isolated raw-mode PTY:
@@ -34,3 +34,9 @@ Same 'no codex process' error at line 52 (10.2 seconds).
 
 Both screenshot runs created and closed their own test workspace and raw-mode PTY.
 No user terminal input, conversation or credential is included.
+
+Post-composition regression:
+Before: [ESC + CR, "한"] (test failed as expected)
+After: ["한", ESC + CR] (test passed, no delayed duplicate)
+Stock xterm 5.5.0: full browser suite passed.
+xterm #334 backport at 93caf43: focused browser regression passed.
