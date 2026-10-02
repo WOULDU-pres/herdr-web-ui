@@ -4,8 +4,10 @@ import { CHIME_NOTES, playAlertSound, unlockAlertSound } from "./alertSound.ts";
 /** A stand-in AudioContext that starts suspended, as a page's does before any tap or key. */
 const started: number[] = [];
 let resumes = 0;
+const made: FakeAudioContext[] = [];
 class FakeAudioContext {
-  state: "suspended" | "running" = "suspended";
+  state: "suspended" | "running" | "closed" = "suspended";
+  constructor() { made.push(this); }
   currentTime = 0;
   destination = {};
   async resume() { resumes += 1; this.state = "running"; }
@@ -50,5 +52,17 @@ describe("alert sound", () => {
   it("reuses the running context on later gestures", async () => {
     expect(await unlockAlertSound()).toBe(true);
     expect(resumes).toBe(1);
+    expect(made.length).toBe(1);
+  });
+
+  it("makes a new context on the next gesture once the browser closed the old one", async () => {
+    made[0]!.state = "closed";
+    started.length = 0;
+    playAlertSound("done");
+    expect(started).toEqual([]);
+    expect(await unlockAlertSound()).toBe(true);
+    expect(made.length).toBe(2);
+    playAlertSound("done");
+    expect(started).toEqual([...CHIME_NOTES.done]);
   });
 });

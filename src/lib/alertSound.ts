@@ -29,7 +29,8 @@ function contextClass(): typeof AudioContext | undefined {
 export async function unlockAlertSound(): Promise<boolean> {
   const Context = contextClass();
   if (!Context) return false;
-  context ??= new Context();
+  // a context the browser closed never resumes: the next gesture makes a new one
+  if (!context || context.state === "closed") context = new Context();
   if (context.state === "suspended") {
     try {
       await context.resume();
