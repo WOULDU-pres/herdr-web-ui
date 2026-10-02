@@ -1,0 +1,10 @@
+bun test v1.4.2 (744846f84)
+
+server/submit.contract.test.ts:
+(pass) WebSocket submit > types the terminal's input line into a waiting agent like the keyboard, then its Enter [296.99ms]
+
+ 1 pass
+ 18 filtered out
+ 0 fail
+ 3 expect() calls
+Ran 1 test across 1 file. [2.90s]

@@ -1,0 +1,6 @@
+PASS delayed machines poll preserves newer streamed pane status
+PASS terminal path drop, native path paste and JSON file drop/paste
+PASS Cmd+Backspace clears the entire input in a real owned readline PTY
+PASS macOS Cmd+Backspace sends Ctrl+U once and preserves other Backspace combinations
+PASS pending IME text precedes Cmd+Backspace without duplicates; active composition stays native
+PASS non-macOS Meta+Backspace keeps native DEL

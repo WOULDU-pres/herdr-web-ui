@@ -1,0 +1,34 @@
+macOS Cmd+Backspace regression
+Base: origin/main at 47df814
+Fix: 547cabb
+Environment: Linux (WSL), herdr 0.9.3, Bun 1.4.2, Playwright Chromium 153
+MacIntel platform and Command events are emulated in an isolated browser context.
+No physical macOS/Safari device was tested.
+
+Actual browser -> WebSocket -> raw PTY bytes:
+Backspace:       before 7f, after 7f
+Cmd+Backspace:   before 7f, after 15
+Ctrl+U:          before 15, after 15
+
+generate:types --check: PASS
+typecheck: PASS
+build: PASS
+test:unit: 1036 pass, 3 existing skips, 0 fail
+ui-regression.ts: PASS (entire suite, including the real readline PTY)
+xterm #334 at 93caf43: focused browser regression PASS
+
+Real readline buffer:
+before deletion: "remove this entire input"
+after Cmd+Backspace: ""
+
+Post-composition frame order: ["한", "\x15"]
+No delayed duplicate, active composition flags remain native.
+Other Backspace combinations and non-macOS Meta+Backspace keep their sequences.
+
+Broader integration suite: 168 pass, 9 fail
+8 existing Codex-binding process detection failures; representative baseline failure reproduced earlier on unmodified 1608cce.
+1 submit timing assertion measured 119ms against >=120ms.
+That submit case passed on focused retry (1 pass, 18 filtered out, 0 fail).
+No server code changed by this PR.
+
+All terminal and conversation state was created for the test itself.
