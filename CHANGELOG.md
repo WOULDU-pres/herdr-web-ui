@@ -62,6 +62,9 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
   instead of the "not built yet" notice. The Windows installer replaces a copy from a release
   without Windows support, and says so when a release cannot run there.
   ([#356](https://github.com/devswha/herdr-web-ui/pull/356))
+- After `/new` in an OmO pane, the chat stops showing the conversation before it: OmO writes the
+  new session's file only with its first message, and until then the chat shows what a fresh OmO
+  shows. ([#351](https://github.com/devswha/herdr-web-ui/pull/351) by @WOULDU-pres)
 
 ### Fixed
 - After `/new` in an OmO pane, the chat stops showing the conversation before it. OmO writes
