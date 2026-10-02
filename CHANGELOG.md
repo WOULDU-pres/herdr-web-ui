@@ -15,6 +15,11 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
   remembered pane views on this device. Shell panes still open in Terminal.
   ([#325](https://github.com/devswha/herdr-web-ui/pull/325) by @Haeminway1)
 
+### Fixed
+- After `/new` in an OmO pane, the chat stops showing the conversation before it. OmO writes
+  the new session's file only with its first message, and until then the chat kept the earlier
+  one; it now shows what a fresh OmO shows, and the new conversation once it begins.
+
 ## [0.3.43] - 2026-10-02
 
 ### Changed
