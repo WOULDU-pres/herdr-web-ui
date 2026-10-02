@@ -11,7 +11,8 @@
  * - omo: herdr knows nothing about its store and its label for the pane flips
  *   between `pi` and `claude` as omo spawns model CLIs, so the pane's process
  *   tree routes it and process/session evidence selects a unique transcript
- *   under ~/.omo/agent/sessions/<cwd-slug>/. It writes omp's session shape, so
+ *   under <its agent dir>/sessions/<cwd-slug>/ (~/.omo/agent unless the process
+ *   moved it with OMO_CODING_AGENT_DIR). It writes omp's session shape, so
  *   parseOmpTranscript (transcript-records.ts) reads it.
  * - gjc: an open session file or fresh native terminal breadcrumb belonging to
  *   its process (gjc-runtime.ts). It writes omp's session shape too.
@@ -754,7 +755,11 @@ async function resolveTranscript(pane: HerdrPane, cwd: string, codexHome?: strin
     // Claude's project is the directory it started in, the process's own cwd more often than the pane's
     if (agent === "claude") return { source: "claude-transcript", path: await claudeTranscriptPath(paneId, [cwd, pane.foreground_cwd]) };
     if (agent === "omp") return { source: "omp-transcript", path: await ompTranscriptPath(paneId) };
-    if (agent === "gjc") return { source: "gjc-transcript", path: await gjcTranscriptPath(paneId, cwd) };
+    if (agent === "gjc") {
+      // GJC can change its own cwd without changing the pane's shell directory.
+      const sessionCwd = typeof pane.foreground_cwd === "string" && pane.foreground_cwd.length > 0 ? pane.foreground_cwd : cwd;
+      return { source: "gjc-transcript", path: await gjcTranscriptPath(paneId, sessionCwd) };
+    }
     // pi's own label only routes pi: an omo pane was taken above, by its process tree.
     if (agent === "pi") {
       const path = await piTranscriptPath(paneId);
