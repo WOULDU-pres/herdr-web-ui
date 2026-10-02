@@ -1,0 +1,37 @@
+Shift+Enter live-terminal regression
+Base: devswha/herdr-web-ui main / v0.3.43 (1608cce)
+Fix: 31b5569
+Environment: Linux (WSL), herdr 0.9.3, Bun 1.4.2, Playwright Chromium 153
+
+Actual browser keyboard events -> WebSocket input -> isolated raw-mode PTY:
+                    Before       After
+Enter               0d           0d
+Shift+Enter         0d           1b 0d
+Alt+Enter           1b 0d        1b 0d
+PASS: browser frames and received PTY bytes match for all three keys
+
+Checks:
+bun run generate:types --check: PASS
+bun run typecheck: PASS
+bun run build: PASS
+bun run test:unit: 1034 pass, 2 skip, 0 fail
+bun scripts/ui-regression.ts: PASS (the lockfile's Playwright Chromium)
+
+Browser regression excerpt:
+PASS terminal Shift+Enter sends a newline chord once and preserves Enter, Alt+Enter and IME
+PASS terminal clipboard paste sends text once and preserves Ctrl+C
+PASS a pane shortcut switches panes and types nothing
+
+Broader integration results:
+bun run test:integration: 169 pass, 8 fail
+All eight failures are in the unchanged server/codex-binding.contract.test.ts.
+Error: no codex process in <owned-test-pane>
+at server/codex-binding.contract.test.ts:52
+
+Baseline check on unmodified 1608cce:
+bun test server/codex-binding.contract.test.ts --test-name-pattern 'reads the thread a Codex TUI was resumed on' --timeout 15000
+0 pass, 7 filtered out, 1 fail
+Same 'no codex process' error at line 52 (10.2 seconds).
+
+Both screenshot runs created and closed their own test workspace and raw-mode PTY.
+No user terminal input, conversation or credential is included.
