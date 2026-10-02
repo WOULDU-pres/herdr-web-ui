@@ -21,6 +21,7 @@ import { AgentMark } from "./AgentMark.tsx";
 import { DevicesPanel } from "./DevicesPanel.tsx";
 import { PhonePanel } from "./PhonePanel.tsx";
 import { PushTestControls } from "./PushTestControls.tsx";
+import { playAlertSound, unlockAlertSound } from "../lib/alertSound.ts";
 import { UpdateControls } from "./UpdateControls.tsx";
 
 export interface SettingsDialogProps {
@@ -431,6 +432,14 @@ export function SettingsDialog({ open, onClose, updates, auth, onEnableNotificat
             <div className="settings-row">
               <div><span className="settings-label">{t("In the app")}</span><span className="settings-description">{t("While the app is open, these drop in from the top of the screen at once. Tap one to open its pane.")}</span></div>
               <Toggle label={t("In the app")} checked={settings.alertInApp} onChange={(alertInApp) => update({ alertInApp })} />
+            </div>
+            <div className="settings-row">
+              <div><span className="settings-label">{t("Sound")}</span><span className="settings-description">{t("While a tab of the app is open, it chimes for these alerts, also when a Focus or Do Not Disturb silences notifications.")}</span></div>
+              <Toggle label={t("Sound")} checked={settings.alertSound} onChange={(alertSound) => {
+                update({ alertSound });
+                // this tap is the gesture the page needs to play audio; the chime is the preview
+                if (alertSound) void unlockAlertSound().then((ready) => { if (ready) playAlertSound("done"); });
+              }} />
             </div>
           </section>
 

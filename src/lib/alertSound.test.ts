@@ -1,0 +1,54 @@
+import { afterAll, describe, expect, it } from "bun:test";
+import { CHIME_NOTES, playAlertSound, unlockAlertSound } from "./alertSound.ts";
+
+/** A stand-in AudioContext that starts suspended, as a page's does before any tap or key. */
+const started: number[] = [];
+let resumes = 0;
+class FakeAudioContext {
+  state: "suspended" | "running" = "suspended";
+  currentTime = 0;
+  destination = {};
+  async resume() { resumes += 1; this.state = "running"; }
+  createGain() {
+    return { gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: (node: unknown) => node };
+  }
+  createOscillator() {
+    const oscillator = {
+      type: "",
+      frequency: { value: 0 },
+      connect: (node: unknown) => node,
+      start() { started.push(oscillator.frequency.value); },
+      stop() {},
+    };
+    return oscillator;
+  }
+}
+
+const saved = (globalThis as { AudioContext?: unknown }).AudioContext;
+Object.assign(globalThis, { AudioContext: FakeAudioContext });
+afterAll(() => { Object.assign(globalThis, { AudioContext: saved }); });
+
+describe("alert sound", () => {
+  it("skips a chime before the page was allowed to play audio, instead of queueing it", () => {
+    playAlertSound("blocked");
+    expect(started).toEqual([]);
+  });
+
+  it("plays each kind's notes once a gesture unlocked the tab", async () => {
+    expect(await unlockAlertSound()).toBe(true);
+    expect(resumes).toBe(1);
+    playAlertSound("blocked");
+    playAlertSound("done");
+    expect(started).toEqual([...CHIME_NOTES.blocked, ...CHIME_NOTES.done]);
+  });
+
+  it("tells a question, which rises, from a finish, which falls", () => {
+    expect(CHIME_NOTES.blocked[0]!).toBeLessThan(CHIME_NOTES.blocked[1]!);
+    expect(CHIME_NOTES.done[0]!).toBeGreaterThan(CHIME_NOTES.done[1]!);
+  });
+
+  it("reuses the running context on later gestures", async () => {
+    expect(await unlockAlertSound()).toBe(true);
+    expect(resumes).toBe(1);
+  });
+});
