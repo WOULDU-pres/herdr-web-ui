@@ -1,0 +1,46 @@
+PASS delayed machines poll preserves newer streamed pane status
+PASS terminal path drop, native path paste and JSON file drop/paste
+PASS terminal clipboard paste sends text once and preserves Ctrl+C
+PASS settings shortcut and theme
+PASS the bell turns alerts off and on again
+PASS Settings push test: sent, stale/local missing subscription, recovery, failure, off, mobile layout
+PASS screen wake lock: opt-in, hide/return, off, persistence, refusal, unsupported, no pane
+PASS Needs you: collapsed PCs, same pane IDs, selection, resume, offline and mobile drawer
+PASS masked secret input: both lenses, no drafts/queue/echo, disconnect, background and cancel
+PASS plain drag copies terminal text; Ctrl+C copies a selection (also without the async clipboard)
+PASS a selecting drag scrolls herdr by wheel and edge, and copies herdr's text for the whole range
+PASS drag copy starts in the gesture, survives denied clipboard permission, and ignores stale or empty selection responses
+PASS plan meters beside Settings: accounts, order, hiding, used or left, overflow, popover, refresh, Escape, off switch and phone fit
+PASS plan meters at the top of the list: one poller, accounts apart, phone fit, open panel leaves the PCs room, back beside Settings
+PASS notification startup: real worker messages retain the newest pane before App subscribes
+PASS viewport contract: idle, keyboard resize, field handoff, blur, rotation, xterm modes and pointer changes
+PASS one choice in Settings opens every agent pane in the chat
+PASS the message box keeps its focus and takes dictated text while the socket reconnects
+prompt: claude pane w8:p1 is blocked on a screen no reader knows; fallback card (2 options)
+PASS no in-app alert for the open pane
+prompt: claude pane w9:p1 is blocked on a screen no reader knows; fallback card (2 options)
+PASS an in-app alert drops in for another pane, and a tap opens it
+PASS a flick up puts an in-app alert away
+PASS an in-app alert goes by itself
+PASS in-app alerts turned off stay off
+PASS no alert sound before the page was tapped
+PASS a pane that waits chimes, the one in front does not
+PASS Settings turns the alert sound off and on, with a preview
+PASS queue held through status changes and explicitly sent to its owner
+PASS quick replies send as typed, queue mid-turn, and leave the draft
+PASS the composer keeps an IME's committing Enter
+PASS drafts stay with their panes
+PASS successful sends settle after switching panes and preserve edits made after returning
+PASS a folder folds from its caret, stays folded across reloads, and unfolds for a pane opened inside it
+PASS upload batch cannot cross panes
+PASS session creation stays pending and opens one owned workspace
+PASS startup prompt appears and accepts an answer while the agent status is idle
+PASS a typed pick answered in the terminal does not wait on the same menu asked again
+PASS Claude's suggestion fills the composer with Tab, returns after a send, and stays with its pane
+PASS Send now on a queued message drops Claude's suggestion
+PASS mobile composer with unavailable storage and no horizontal overflow
+PASS a pane picked on a phone waits for a tap before raising the keyboard
+PASS a phone offers Claude's suggestion as a chip only once Settings turns it on
+PASS touch terminal input line sends whole lines, Enter alone, and yields to direct typing
+PASS closed and obsolete saved panes recover their selection
+PASS token and paired-device sign out return to the access gate
