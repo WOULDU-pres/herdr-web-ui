@@ -32,3 +32,15 @@ That submit case passed on focused retry (1 pass, 18 filtered out, 0 fail).
 No server code changed by this PR.
 
 All terminal and conversation state was created for the test itself.
+
+Latest main integration recheck
+Base: bb7ef50 (includes merged #339 and the shipped #334 xterm patch)
+Fix head: 7f3da8aae679ad450c5baa55f11d670978e28e70
+Resolved overlapping onKey/onData and UI regression additions; retained both key mappings.
+generate:types --check, typecheck, build: PASS
+test:unit: 1059 pass, 3 existing skips, 0 fail
+ui-regression.ts: PASS (entire suite; includes Shift+Enter, Cmd+Backspace, pending IME ordering, real readline buffer deletion)
+Broader integration suite: 170 pass, 9 fail
+8 unchanged Codex fixture process detection failures; 1 unchanged updater supervisor shutdown assertion (expected exit 0, observed 1).
+These server files have no diff from the latest upstream main.
+Focused updater retry: PASS (1 pass, 12 filtered out, 0 fail).
