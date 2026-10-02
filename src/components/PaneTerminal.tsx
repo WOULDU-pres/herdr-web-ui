@@ -295,16 +295,6 @@ export function PaneTerminal({
     // pane it had just switched to as ESC[1;6B.
     term.attachCustomKeyEventHandler((event) => {
       if (isAppShortcut(event)) return false;
-      // xterm otherwise encodes Shift+Enter as plain Enter. Alt+Enter's legacy
-      // sequence is understood as a newline by agent TUIs and by Herdr's attach.
-      if (event.key === "Enter" && event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey
-        && !event.isComposing && event.keyCode !== 229) {
-        if (event.type === "keydown") {
-          event.preventDefault();
-          term.input("\x1b\r", true);
-        }
-        return false;
-      }
       if (!event.ctrlKey || event.altKey || event.metaKey) return true;
       const typed = event.key.toLowerCase();
       const key = /^[a-z]$/.test(typed) ? typed : /^Key([A-Z])$/.exec(event.code)?.[1]?.toLowerCase() ?? typed;
@@ -733,7 +723,16 @@ export function PaneTerminal({
 
     const poll = window.setInterval(() => setConnected(socket.connected), 1000);
 
+    // onKey runs after xterm drains a pending IME commit, immediately before the
+    // key's onData. Remap only that CR, preserving composition text and its order.
+    let shiftEnter = false;
+    const onShiftEnter = term.onKey(({ key, domEvent: event }) => {
+      shiftEnter = key === "\r" && event.key === "Enter" && event.shiftKey
+        && !event.ctrlKey && !event.altKey && !event.metaKey && !event.isComposing && event.keyCode !== 229;
+    });
     const onData = term.onData((data) => {
+      if (shiftEnter && data === "\r") data = "\x1b\r";
+      shiftEnter = false;
       const current = paneRef.current;
       if (!current || observeRef.current || secretRef.current !== null || heldRef.current) return;
       if (!socket.connected) {
@@ -923,6 +922,7 @@ export function PaneTerminal({
       selectionChange.dispose();
       window.removeEventListener("focus", refit);
       document.removeEventListener("visibilitychange", onVisible);
+      onShiftEnter.dispose();
       onData.dispose();
       host.removeEventListener("paste", onFilePaste, { capture: true });
       host.removeEventListener("dragover", onDragOver);

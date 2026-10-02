@@ -189,7 +189,31 @@ try {
     assert.equal(inputs.slice(beforeIme).some(({ text }) => text === "\x1b\r"), false,
       "IME commits must not receive the custom Shift+Enter sequence");
   }
+  // compositionend queues its send for the next timer. A following non-composing
+  // Shift+Enter must let xterm flush that commit before sending the newline.
+  await terminalInput.focus();
+  const beforeCommittedIme = inputs.length;
+  await terminalInput.evaluate(async (element) => {
+    const textarea = element as HTMLTextAreaElement;
+    textarea.value = "";
+    textarea.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    textarea.value = "한";
+    textarea.dispatchEvent(new CompositionEvent("compositionupdate", { data: "한", bubbles: true }));
+    // An earlier composition update has established the committed span.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    textarea.dispatchEvent(new CompositionEvent("compositionend", { data: "한", bubbles: true }));
+    const enter = { key: "Enter", code: "Enter", keyCode: 13, which: 13,
+      shiftKey: true, isComposing: false, bubbles: true, cancelable: true };
+    textarea.dispatchEvent(new KeyboardEvent("keydown", enter));
+    textarea.dispatchEvent(new KeyboardEvent("keyup", enter));
+  });
+  await until(() => inputs.length >= beforeCommittedIme + 2, "IME commit followed by Shift+Enter");
+  await page.waitForTimeout(NO_SEND_WAIT_MS);
+  assert.deepEqual(inputs.slice(beforeCommittedIme).map(({ pane_id, text }) => ({ pane_id, text })),
+    [{ pane_id: paneA, text: "한" }, { pane_id: paneA, text: "\x1b\r" }],
+    "a pending IME commit must precede Shift+Enter without a delayed duplicate");
   console.log("PASS terminal Shift+Enter sends a newline chord once and preserves Enter, Alt+Enter and IME");
+  console.log("PASS pending IME commit precedes Shift+Enter without duplicate text");
   // a pane shortcut switches panes and types nothing: xterm used to send ESC[1;6B / ESC[1;6A too
   const selectedTitle = () => page.locator(".pane-item.is-selected .pane-select").getAttribute("title");
   for (const key of ["Control+Shift+ArrowDown", "Control+Shift+ArrowUp"]) {
