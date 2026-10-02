@@ -295,6 +295,16 @@ export function PaneTerminal({
     // pane it had just switched to as ESC[1;6B.
     term.attachCustomKeyEventHandler((event) => {
       if (isAppShortcut(event)) return false;
+      // xterm otherwise encodes Shift+Enter as plain Enter. Alt+Enter's legacy
+      // sequence is understood as a newline by agent TUIs and by Herdr's attach.
+      if (event.key === "Enter" && event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey
+        && !event.isComposing && event.keyCode !== 229) {
+        if (event.type === "keydown") {
+          event.preventDefault();
+          term.input("\x1b\r", true);
+        }
+        return false;
+      }
       if (!event.ctrlKey || event.altKey || event.metaKey) return true;
       const typed = event.key.toLowerCase();
       const key = /^[a-z]$/.test(typed) ? typed : /^Key([A-Z])$/.exec(event.code)?.[1]?.toLowerCase() ?? typed;

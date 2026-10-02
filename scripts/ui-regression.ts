@@ -164,6 +164,32 @@ try {
     await until(() => inputs.length > beforeCancel, "terminal Ctrl+C");
     assert.equal(inputs.at(-1)?.text, "\x03", "other terminal control keys must still work");
   }
+  // xterm collapses Shift+Enter into CR unless the terminal supplies a newline chord.
+  // Check actual browser key events and the frames sent to an owned pane, including keyup.
+  for (const [shortcut, expected] of [
+    ["Enter", "\r"],
+    ["Shift+Enter", "\x1b\r"],
+    ["Alt+Enter", "\x1b\r"],
+  ]) {
+    await terminalInput.focus();
+    const beforeEnter = inputs.length;
+    await page.keyboard.press(shortcut!);
+    await until(() => inputs.length > beforeEnter, `terminal ${shortcut}`);
+    await page.waitForTimeout(NO_SEND_WAIT_MS);
+    assert.deepEqual(inputs.slice(beforeEnter).map(({ pane_id, text }) => ({ pane_id, text })),
+      [{ pane_id: paneA, text: expected }], `${shortcut} must send its sequence exactly once`);
+  }
+  // A composition commit belongs to xterm/IME; the custom binding must not replace it.
+  for (const composition of [{ isComposing: true, keyCode: 13 }, { isComposing: false, keyCode: 229 }]) {
+    const beforeIme = inputs.length;
+    await terminalInput.dispatchEvent("keydown", {
+      key: "Enter", code: "Enter", shiftKey: true, ...composition, bubbles: true, cancelable: true,
+    });
+    await page.waitForTimeout(NO_SEND_WAIT_MS);
+    assert.equal(inputs.slice(beforeIme).some(({ text }) => text === "\x1b\r"), false,
+      "IME commits must not receive the custom Shift+Enter sequence");
+  }
+  console.log("PASS terminal Shift+Enter sends a newline chord once and preserves Enter, Alt+Enter and IME");
   // a pane shortcut switches panes and types nothing: xterm used to send ESC[1;6B / ESC[1;6A too
   const selectedTitle = () => page.locator(".pane-item.is-selected .pane-select").getAttribute("title");
   for (const key of ["Control+Shift+ArrowDown", "Control+Shift+ArrowUp"]) {

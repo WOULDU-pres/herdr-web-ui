@@ -7,6 +7,10 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 
 ## [Unreleased]
 
+### Fixed
+- Shift+Enter in the live terminal sends the same newline chord as Alt+Enter, instead of plain
+  Enter that submits an agent's message. IME commits keep their existing key handling.
+
 ## [0.3.43] - 2026-10-02
 
 ### Changed
