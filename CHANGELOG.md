@@ -7,6 +7,18 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 
 ## [Unreleased]
 
+### Fixed
+- Direct terminal input preserves rapid IME commits when punctuation arrives before composition
+  timers run, with a bounded xterm 5.5 backport and Korean final-consonant regression checks.
+- Terminal input keeps multi-character IME commits and emoji while disconnected, waits for the
+  attachment before sending keys, and reports input failures. Unsent input lines survive pane,
+  lens and mode changes; late acknowledgements preserve replacement edits. Composition keeps
+  its Enter and Send button, and terminal key-bar taps wait until it finishes.
+
+### Added
+- Choose the terminal input line or direct typing on desktop as well as touch screens, and
+  customize or unbind the app's Mod+Shift shortcuts with conflict checks and reset.
+
 ## [0.3.43] - 2026-10-02
 
 ### Changed

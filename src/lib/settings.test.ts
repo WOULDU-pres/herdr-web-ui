@@ -279,3 +279,9 @@ describe("plan meter placement", () => {
     expect(sanitizeSettings({ usagePlacement: "left" }).usagePlacement).toBe("footer");
   });
 });
+
+it("sanitizes input modes and shortcut overrides without accepting arbitrary commands", () => {
+  expect(sanitizeSettings({ terminalInputMode: "bad" }).terminalInputMode).toBe("auto");
+  expect(sanitizeSettings({ terminalInputMode: "line" }).terminalInputMode).toBe("line");
+  expect(sanitizeSettings({ shortcutOverrides: { palette: "p", settings: null, voice: "x", unknown: "x", "next-pane": "rm -rf" } }).shortcutOverrides).toEqual({ palette: "p", settings: null });
+});
