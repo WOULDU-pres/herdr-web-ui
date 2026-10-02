@@ -20,7 +20,6 @@ bun scripts/ui-regression.ts: PASS (the lockfile's Playwright Chromium)
 Browser regression excerpt:
 PASS terminal Shift+Enter sends a newline chord once and preserves Enter, Alt+Enter and IME
 PASS terminal clipboard paste sends text once and preserves Ctrl+C
-PASS a pane shortcut switches panes and types nothing
 
 Broader integration results:
 bun run test:integration: 169 pass, 8 fail
