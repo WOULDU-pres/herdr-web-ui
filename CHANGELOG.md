@@ -68,7 +68,6 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 - After `/new` in an OmO pane, the chat stops showing the conversation before it: OmO writes the
   new session's file only with its first message, and until then the chat shows what a fresh OmO
   shows. ([#351](https://github.com/devswha/herdr-web-ui/pull/351) by @WOULDU-pres)
-||||||| 8c5c10d
 - On a Windows PC, an omo pane shows omo's mark instead of Claude's, and its chat finds the
   conversation: process words with `bun.exe`, backslashes and a drive letter read as omo, and the
   session folder is named as omo's engine names a Windows folder.
