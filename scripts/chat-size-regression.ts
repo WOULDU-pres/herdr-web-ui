@@ -86,6 +86,20 @@ export async function checkChatKeepsTerminalSize(browser: Browser, origin: strin
     assert.notEqual(phoneSize, desktopSize, "the phone's terminal lens fits the grid to the phone");
     assert.ok(Number(phoneSize.split(" ")[1]) < Number(desktopSize.split(" ")[1]), `phone ${phoneSize} narrower than desktop ${desktopSize}`);
     console.log(`PASS the phone's terminal lens fits the grid to ${phoneSize}`);
+
+    // the desktop's terminal lens ignored that resize: it drives the grid itself. Entering the chat
+    // lens, its hidden screen takes the grid the pty has now, since what the chat reads there (a
+    // masked prompt) is drawn for the phone's grid. xterm's DOM renderer keeps one element a row.
+    const hiddenRows = () => desktop.locator(".pane-terminal .xterm-rows > div").count();
+    const phoneRows = Number(phoneSize.split(" ")[0]);
+    assert.notEqual(await hiddenRows(), phoneRows, "the desktop's terminal lens kept its own grid");
+    await desktop.getByTitle("Chat transcript (⌘⇧J)", { exact: true }).click();
+    await desktop.locator(".terminal-stack.is-chat").waitFor({ state: "attached" });
+    const adopted = Date.now() + 10_000;
+    while (await hiddenRows() !== phoneRows && Date.now() < adopted) await Bun.sleep(100);
+    assert.equal(await hiddenRows(), phoneRows, "the desktop's chat lens draws its hidden screen for the shared grid");
+    assert.equal(await size(), phoneSize, "entering the chat lens resizes nothing");
+    console.log(`PASS the desktop's chat lens draws its hidden screen for the shared grid of ${phoneSize}`);
   } finally {
     for (const context of contexts) await context.close();
     await workspaceClose(created.workspace.workspace_id).catch(() => undefined);

@@ -159,6 +159,8 @@ export function PaneTerminal({
   const observeRef = useRef(false);
   // a mirrored pane (no terminal attach on its PC): the grid is the pane's own in herdr, adopted like an observer's
   const fixedGridRef = useRef(false);
+  // the pty's grid as the server last said it for this pane (pane-geometry), whoever set it
+  const sharedGridRef = useRef<{ cols: number; rows: number } | null>(null);
   const [observing, setObserving] = useState(false);
   const [secret, setSecret] = useState<{ pane: string; prompt: string } | null>(null);
   const secretRef = useRef<string | null>(null);
@@ -695,6 +697,9 @@ export function PaneTerminal({
         // unless the grid is fixed: then nobody here drives it
         if (message.pane_id !== paneRef.current) return;
         if (message.fixed) fixedGridRef.current = true;
+        // kept while the terminal lens ignores it: another device may drive the grid, and the
+        // chat lens entered later must draw its hidden screen for that grid, not this device's
+        sharedGridRef.current = { cols: message.cols, rows: message.rows };
         // the chat lens adopts the shared grid too: the screen it reads (a masked prompt) is drawn for it
         if (!observeRef.current && !fixedGridRef.current && !chatViewRef.current) return;
         if (term.cols !== message.cols || term.rows !== message.rows) term.resize(message.cols, message.rows);
@@ -1016,6 +1021,10 @@ export function PaneTerminal({
     if (chatView) {
       const pane = paneRef.current;
       if (pane) socketRef.current?.keepSize(pane);
+      // the grid another device left the pty at while this one showed the terminal
+      const shared = sharedGridRef.current;
+      const hidden = termRef.current;
+      if (shared && hidden && !observeRef.current && (hidden.cols !== shared.cols || hidden.rows !== shared.rows)) hidden.resize(shared.cols, shared.rows);
       return;
     }
     if (observeRef.current || fixedGridRef.current) return;
@@ -1045,6 +1054,7 @@ export function PaneTerminal({
     setHeld(false);
     setUnsupported(false);
     fixedGridRef.current = false;
+    sharedGridRef.current = null;
     // the next pane's grid is this browser's again unless it says otherwise (pane-geometry)
     hostRef.current?.toggleAttribute("data-adopted-grid", observeRef.current);
     secretRef.current = null;

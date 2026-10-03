@@ -898,6 +898,26 @@ describe("WebSocket roles and status push", () => {
     }
   }, 60_000);
 
+  it("applies a resize that arrives while a covered attach is still creating the pty", async () => {
+    const created = await workspaceCreate({ cwd: tmpdir(), label: "herdr-web-ui-test-keep-size-switch" });
+    const paneId = created.root_pane.pane_id;
+    const phone = await RecordingSocket.connect(`ws://localhost:${server.port}/ws`);
+    try {
+      // the chat lens attaches, and the user switches to the terminal lens before the terminal
+      // was looked up: both frames are on the server before the pty exists
+      phone.send({ type: "attach", pane_id: paneId, cols: 40, rows: 20, keep_size: true });
+      phone.send({ type: "resize", pane_id: paneId, cols: 91, rows: 27 });
+      // the terminal lens's grid is the pty's, not the pane's own one the covered attach left it at
+      expect(await phone.waitFor((m) => m.type === "pane-geometry" && m.pane_id === paneId && m.cols === 91, "the resize applied after creation", 15_000)).toMatchObject({ cols: 91, rows: 27 });
+      await phone.waitFor((m) => m.type === "input-ready" && m.pane_id === paneId, "attach took", 15_000);
+      phone.send({ type: "input", pane_id: paneId, text: "clear; echo size=$(stty size)\r" });
+      await phone.waitFor((m) => m.type === "pty-data" && m.pane_id === paneId && String(m.data).includes("size=27 91"), "the shell sees the terminal lens's grid", 15_000);
+    } finally {
+      phone.close();
+      await workspaceClose(created.workspace.workspace_id).catch(() => undefined);
+    }
+  }, 60_000);
+
   it("rejects an unknown role mode with an in-band error", async () => {
     const client = await RecordingSocket.connect(`ws://localhost:${server.port}/ws`);
     try {

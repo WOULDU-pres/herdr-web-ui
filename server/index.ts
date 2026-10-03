@@ -1614,6 +1614,14 @@ export function createServer(
                 send(client, { type: "error", code: "invalid_geometry", message: "cols and rows must be integers in 1..1000" });
                 break;
               }
+              // the pty is still being created (an attach from the chat lens, then the switch to the
+              // terminal lens before the terminal was looked up): the resize waits for it. Dropped,
+              // it would leave the pty at the pane's own grid under a terminal fitted to another.
+              const creating = attachments.has(message.pane_id) ? undefined : pendingAttachments.get(message.pane_id);
+              if (creating && client.data.attached.has(message.pane_id)) {
+                try { await creating; } catch { break; }
+                if (client.data.closing || client.data.mode !== "interact" || !client.data.attached.has(message.pane_id)) break;
+              }
               resizePty(message.pane_id, geometry.cols, geometry.rows);
               break;
             }
