@@ -717,10 +717,17 @@ async function codexProcessesOf(paneId: string): Promise<{ list: { pid: number; 
       const executable = argv[0] ?? "";
       const codex = /(?:^|[\\/])codex(?:\.js|\.exe|\.opencodex-real)?$/;
       if (codex.test(executable)) return true;
-      // `node codex.js` and shell shebangs name the script at argv[1].
-      // Later arguments (echo, node -e, sh -c, etc.) are not executables.
-      return /(?:^|[\\/])(?:node|bun|sh|bash|dash)(?:\.exe)?$/.test(executable)
-        && codex.test(argv[1] ?? "");
+      // `node codex.js` and shell shebangs name the script after the interpreter and its
+      // `--flag` options (`node --no-warnings codex.js`). A short option (`-e`, `-c`) or a
+      // long one that takes code or a module as its next argument ends the search: what
+      // follows it is not the script. Later arguments (echo, etc.) are not executables.
+      if (!/(?:^|[\\/])(?:node|bun|sh|bash|dash|zsh)(?:\.exe)?$/.test(executable)) return false;
+      let script = 1;
+      while (argv[script]?.startsWith("--")) {
+        if (/^--(?:eval|print|require|import|loader|experimental-loader)$/.test(argv[script] ?? "")) return false;
+        script++;
+      }
+      return codex.test(argv[script] ?? "");
     });
   return { list, key: list.map((process) => process.pid).sort((left, right) => left - right).join(",") };
 }

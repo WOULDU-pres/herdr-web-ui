@@ -7,6 +7,15 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 
 ## [Unreleased]
 
+### Fixed
+- Claude conversations on Linux can be read without the Herdr integration hook when Claude's
+  native PID record identifies the live interactive session. Reused PIDs, invalid records and
+  multiple Claude processes stay unresolved instead of selecting a same-directory conversation.
+  ([#376](https://github.com/devswha/herdr-web-ui/pull/376) by @WOULDU-pres)
+- Codex conversations recognize renamed executables and recover missing Linux process arguments,
+  preserving resume and process-bound session identity when an answer is no longer on screen.
+  ([#376](https://github.com/devswha/herdr-web-ui/pull/376) by @WOULDU-pres)
+
 ## [0.3.46] - 2026-10-03
 
 ### Added
@@ -136,11 +145,6 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
   ([#358](https://github.com/devswha/herdr-web-ui/pull/358))
 
 ### Fixed
-- Claude conversations on Linux can be read without the Herdr integration hook when Claude's
-  native PID record identifies the live interactive session. Reused PIDs, invalid records and
-  multiple Claude processes stay unresolved instead of selecting a same-directory conversation.
-- Codex conversations recognize renamed executables and recover missing Linux process arguments,
-  preserving resume and process-bound session identity when an answer is no longer on screen.
 - GJC conversations are resolved from the foreground process directory when it differs from
   the pane directory. ([#333](https://github.com/devswha/herdr-web-ui/pull/333) by @Kinetic27)
 - Direct terminal input preserves rapid IME commits when punctuation arrives before composition

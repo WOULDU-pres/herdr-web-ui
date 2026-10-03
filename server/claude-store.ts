@@ -61,9 +61,15 @@ export async function claudeProcessSession(home: string, pid: number): Promise<s
     try {
       if (!(await file.stat()).isFile()) return null;
       const bytes = Buffer.alloc(16 * 1024 + 1);
-      const { bytesRead } = await file.read(bytes, 0, bytes.length, 0);
-      if (bytesRead === bytes.length) return null;
-      text = bytes.subarray(0, bytesRead).toString("utf8");
+      let length = 0;
+      // One read may return less than the file holds; only a read of nothing is its end.
+      for (;;) {
+        const { bytesRead } = await file.read(bytes, length, bytes.length - length, length);
+        if (bytesRead === 0) break;
+        length += bytesRead;
+        if (length === bytes.length) return null;
+      }
+      text = bytes.subarray(0, length).toString("utf8");
     } finally { await file.close(); }
     const record: unknown = JSON.parse(text);
     if (record === null || typeof record !== "object" ||

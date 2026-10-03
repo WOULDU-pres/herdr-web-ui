@@ -144,6 +144,9 @@ for (const argv of [
   ["node", "-e", "/usr/bin/codex", "resume", thread],
   ["python", "/usr/bin/codex.js", "resume", thread],
   ["/bin/sh", "-c", "/usr/bin/codex", "resume", thread],
+  ["node", "--eval", "/usr/bin/codex", "resume", thread],
+  ["node", "--require", "/usr/bin/codex", "resume", thread],
+  ["node", "--no-warnings", "-e", "/usr/bin/codex", "resume", thread],
   ["/usr/bin/not-codex", "resume", thread],
 ]) {
   it(`ignores unrelated executable or command arguments: ${argv.slice(0, 3).join(" ")}`, async () => {
@@ -157,6 +160,10 @@ for (const executable of [
   ["node", "/usr/lib/codex.js"],
   ["/bin/sh", "/usr/bin/codex"],
   ["bun", "/usr/lib/codex.js"],
+  ["node", "--no-warnings", "/usr/bin/codex"],
+  ["bash", "--", "/usr/bin/codex"],
+  ["zsh", "/usr/bin/codex"],
+  ["node", "--max-old-space-size=4096", "--no-warnings", "/usr/lib/codex.js"],
   ["C:\\tools\\codex.exe"],
   ["C:\\tools\\node.exe", "C:\\tools\\codex.js"],
 ]) {
