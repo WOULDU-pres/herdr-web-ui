@@ -8,6 +8,33 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 ## [Unreleased]
 
 ### Added
+- **Settings → herdr → Update herdr** updates herdr itself from the app, on the PC the app runs
+  on (Linux and macOS). herdr refuses `herdr update` typed into one of its panes, and every
+  terminal in the app is a pane, so the server runs it instead: it installs the newest herdr and
+  moves the running panes onto it. Panes and agents keep running, and open terminals reconnect.
+  A newer herdr installed from a shell is picked up the same way.
+  ([#373](https://github.com/devswha/herdr-web-ui/pull/373))
+
+### Changed
+- In the sidebar's By workspace view, a workspace with one pane is a single row again, as it was
+  before 0.3.44: no numbered header above it, and the row carries the reorder handle and names
+  its workspace on its second line. A workspace with several panes keeps its header. A fold made
+  on a one-pane workspace in 0.3.44 no longer hides its row.
+  ([#371](https://github.com/devswha/herdr-web-ui/pull/371))
+- On a desktop the terminal no longer has a bar under it holding one keyboard button. The input
+  line or direct typing is still chosen in Settings → Terminal input mode, and a touch screen
+  keeps the button in its key bar.
+  ([#372](https://github.com/devswha/herdr-web-ui/pull/372))
+
+### Fixed
+- An open terminal no longer says "terminal ended" when herdr hands its panes to a new server,
+  as `herdr update --handoff` and `herdr server live-handoff` do. The pane is still running, so
+  the terminal attaches to it again for everyone viewing it.
+  ([#370](https://github.com/devswha/herdr-web-ui/pull/370))
+
+## [0.3.44] - 2026-10-03
+
+### Added
 - Native Windows x64 installation through `install.ps1`, with the same herdr plugin startup
   and updates. Windows needs Bun and Git, without Node or WSL, and keeps using the terminal
   screen mirror. ([#330](https://github.com/devswha/herdr-web-ui/pull/330) by @JJLiebig)
@@ -68,7 +95,6 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 - After `/new` in an OmO pane, the chat stops showing the conversation before it: OmO writes the
   new session's file only with its first message, and until then the chat shows what a fresh OmO
   shows. ([#351](https://github.com/devswha/herdr-web-ui/pull/351) by @WOULDU-pres)
-||||||| 8c5c10d
 - On a Windows PC, an omo pane shows omo's mark instead of Claude's, and its chat finds the
   conversation: process words with `bun.exe`, backslashes and a drive letter read as omo, and the
   session folder is named as omo's engine names a Windows folder.
@@ -1462,7 +1488,8 @@ First public version.
 - Installable PWA, a mobile key bar, web push alerts and optional token auth.
 - Distribution as a herdr plugin.
 
-[Unreleased]: https://github.com/devswha/herdr-web-ui/compare/v0.3.43...HEAD
+[Unreleased]: https://github.com/devswha/herdr-web-ui/compare/v0.3.44...HEAD
+[0.3.44]: https://github.com/devswha/herdr-web-ui/compare/v0.3.43...v0.3.44
 [0.3.43]: https://github.com/devswha/herdr-web-ui/compare/v0.3.42...v0.3.43
 [0.3.42]: https://github.com/devswha/herdr-web-ui/compare/v0.3.41...v0.3.42
 [0.3.41]: https://github.com/devswha/herdr-web-ui/compare/v0.3.40...v0.3.41
