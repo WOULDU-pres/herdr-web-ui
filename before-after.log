@@ -1,0 +1,14 @@
+built-after
+PASS a phone's chat lens leaves the shared grid at the desktop's 36 145
+PASS the phone's terminal lens fits the grid to 36 57
+AFTER EXIT=0
+built-before
++     keep_size: undefined,
++     type: 'resize'
++   }
+  ]
+
+BEFORE EXIT=1
+ 6 files changed, 90 insertions(+), 13 deletions(-)
+rebuilt-after
+DONE
