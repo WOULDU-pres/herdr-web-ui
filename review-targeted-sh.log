@@ -1,0 +1,33 @@
+bun test v1.4.2 (744846f84)
+
+server/api.contract.test.ts:
+(pass) mutation body validation > rejects non-object JSON without touching herdr or losing the error envelope [28.44ms]
+(pass) mutation body validation > rejects invalid pane identifiers and key/image fields before RPCs [2.35ms]
+(pass) tab creation > requires an explicit workspace and validates fields before creating a tab [7.30ms]
+(pass) tab creation > creates a sibling tab with its own cwd and label without adding a workspace [15.80ms]
+(pass) tab creation > supports the authenticated local-PC alias without allowing other tab routes [10.09ms]
+(pass) tab creation > forwards remote tab creation using the registered bridge token [30.35ms]
+(pass) tab creation > shares unique agent names across concurrent tabs and preserves a tab when an explicit name collides [27.98ms]
+(pass) tab creation > starts a shell agent in the new tab with its arguments intact [56.88ms]
+(pass) tab creation > returns the created tab when a shell agent is unavailable [108.82ms]
+(pass) token auth > rejects an unauthenticated API call with 401 unauthorized [2.49ms]
+(pass) token auth > keeps web push behind the gate: a subscription receives pane titles [1.32ms]
+(pass) token auth > keeps the image upload behind the gate [0.45ms]
+(pass) token auth > keeps /api/health public and advertises the gate state [0.96ms]
+(pass) token auth > refuses a token that does not match [0.80ms]
+(pass) token auth > hands back a hardened session cookie for the right token [0.63ms]
+(pass) token auth > accepts the session cookie [1.52ms]
+(pass) token auth > accepts a bearer token [1.24ms]
+(pass) token auth > expires the cookie on logout [0.48ms]
+(pass) token auth > never upgrades a websocket without a token [0.98ms]
+(pass) token auth > upgrades a websocket that carries the cookie [1.81ms]
+(pass) PC management API > reports bridge auth independently of herdr and exposes the local PC [2.40ms]
+(pass) PC management API > rejects CSRF, malformed targets and remote forwarding outside the allowlist [3.32ms]
+(pass) PC management API > gates PC metadata, setup and SSE behind the existing token [10.68ms]
+(pass) refuses cross-origin changes while allowing same-origin and CLI requests [120.79ms]
+
+ 24 pass
+ 58 filtered out
+ 0 fail
+ 240 expect() calls
+Ran 24 tests across 1 file. [812.00ms]
