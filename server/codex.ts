@@ -1,7 +1,7 @@
 /** Native Codex rollouts contain both display events and model context. Only
  * conversation records belong in chat; developer prompts and terminal chrome do not. */
 import { Database } from "bun:sqlite";
-import { closeSync, openSync, readdirSync, readlinkSync, readSync, realpathSync, statSync } from "node:fs";
+import { closeSync, openSync, readdirSync, readFileSync, readlinkSync, readSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, sep } from "node:path";
 import type { ConversationPart, ConversationTurn, HerdrPane } from "../shared/protocol.ts";
@@ -699,13 +699,29 @@ function theirs(rollouts: string[], paneId: string, claimed: ReadonlySet<string>
   return rollouts.filter((rollout) => !elsewhere.has(rollout) && !claimed.has(rollout));
 }
 
-/** A pane's Codex processes: the ones whose command line names codex, and their pids as one key. */
+/** A pane's Codex executables (or interpreter scripts), and their pids as one key. */
 async function codexProcessesOf(paneId: string): Promise<{ list: { pid: number; argv?: string[] }[]; key: string }> {
   const processInfo = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>(
     "pane.process_info", { pane_id: paneId },
   );
   const list = (processInfo.process_info?.foreground_processes ?? [])
-    .filter((process) => process.argv?.some((arg) => /(?:^|\/)codex(?:\.js)?$/.test(arg)));
+    .map((foreground) => {
+      if (foreground.argv?.length || process.platform !== "linux") return foreground;
+      // herdr can report only pid/name. Read this process, never infer argv from
+      // its name; an exited or inaccessible process provides no binding evidence.
+      try {
+        return { ...foreground, argv: readFileSync(`/proc/${foreground.pid}/cmdline`, "utf8").split("\0") };
+      } catch { return foreground; }
+    })
+    .filter(({ argv = [] }) => {
+      const executable = argv[0] ?? "";
+      const codex = /(?:^|[\\/])codex(?:\.js|\.exe|\.opencodex-real)?$/;
+      if (codex.test(executable)) return true;
+      // `node codex.js` and shell shebangs name the script at argv[1].
+      // Later arguments (echo, node -e, sh -c, etc.) are not executables.
+      return /(?:^|[\\/])(?:node|bun|sh|bash|dash)(?:\.exe)?$/.test(executable)
+        && codex.test(argv[1] ?? "");
+    });
   return { list, key: list.map((process) => process.pid).sort((left, right) => left - right).join(",") };
 }
 
