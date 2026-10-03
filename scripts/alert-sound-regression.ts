@@ -97,7 +97,8 @@ export async function checkAlertSound(browser: Browser, origin: string): Promise
     assert.deepEqual(errors, []);
   } finally {
     await context.close();
-    for (const workspace of workspaces) await workspaceClose(workspace).catch(() => undefined);
+    // closing the last pane can already have removed the workspace; any other failure is reported
+    for (const workspace of workspaces) await workspaceClose(workspace).catch((error) => { if (error?.code !== "workspace_not_found") throw error; });
     rmSync(root, { recursive: true, force: true });
   }
 }
