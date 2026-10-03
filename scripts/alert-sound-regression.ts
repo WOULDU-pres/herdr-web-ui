@@ -53,11 +53,14 @@ export async function checkAlertSound(browser: Browser, origin: string): Promise
     const chimes = () => page.evaluate(() => [...(window as unknown as { chimes: number[] }).chimes]);
     // the app must have seen the pane work before it waits: a wait first seen is no news
     const seen = (pane: string, status: string) => page.locator(`.pane-item:has(.pane-select[title^="${pane} —"]) [data-status="${status}"]`).first().waitFor({ state: "attached" });
-    const block = async (pane: string) => {
+    // The card for a waiting pane leaves by itself after a few seconds, so nothing is awaited
+    // between the report and the wait for the card. Only the pane in front, which gets no card,
+    // is followed to `blocked` in the sidebar.
+    const block = async (pane: string, inFront = false) => {
       await report(pane, "working");
       await seen(pane, "working");
       await report(pane, "blocked");
-      await seen(pane, "blocked");
+      if (inFront) await seen(pane, "blocked");
     };
 
     // no tap yet: the page may not play, and nothing is kept to sound later
@@ -71,10 +74,11 @@ export async function checkAlertSound(browser: Browser, origin: string): Promise
     // the tap opened the other pane: it is the one in front now
     await report(otherPane, "idle");
     await report(openPane, "idle");
-    await block(otherPane);
+    await block(otherPane, true);
     await block(openPane);
-    // status events arrive in order, and the card drops in with the chime: by the time the card
-    // for the pane behind shows, a chime for the pane in front would have sounded already
+    // the pane in front was seen waiting before the other was reported, and the card drops in
+    // with the chime: by the time the card for the pane behind shows, a chime for the pane in
+    // front would have sounded already
     await page.locator(".droplet-card").waitFor({ state: "visible" });
     assert.deepEqual(await chimes(), [660, 880], "one rising chime, for the pane not in front");
     console.log("PASS a pane that waits chimes, the one in front does not");
