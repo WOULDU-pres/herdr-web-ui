@@ -1417,7 +1417,8 @@ export function createServer(
               client.data.attached.add(message.pane_id);
               let attachment: PaneAttachment;
               try {
-                attachment = await ensureAttachment(message.pane_id, geometry.cols, geometry.rows, client.data.mode === "observe");
+                // a covered grid (keep_size) creates the pty at the pane's own size, as an observer does
+                attachment = await ensureAttachment(message.pane_id, geometry.cols, geometry.rows, client.data.mode === "observe" || message.keep_size === true);
               } catch (error) {
                 client.data.attached.delete(message.pane_id);
                 throw error;
@@ -1450,11 +1451,11 @@ export function createServer(
               if (client.data.closing) break;
               if (attachment.ready && !attachment.held) send(client, { type: "input-ready", pane_id: message.pane_id });
               if (attachment.mirror) break;
-              if (client.data.mode === "interact") {
+              if (client.data.mode === "interact" && message.keep_size !== true) {
                 // an operator's viewport owns the shared grid
                 resizePty(message.pane_id, geometry.cols, geometry.rows);
               } else {
-                // an observer adopts whatever grid the operators left behind
+                // an observer, or a grid the chat lens covers, adopts the grid the operators left behind
                 send(client, {
                   type: "pane-geometry",
                   pane_id: message.pane_id,

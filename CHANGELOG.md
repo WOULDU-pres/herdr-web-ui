@@ -76,6 +76,9 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 - The chat lens finds an omo pane's conversation when its process keeps its sessions outside
   `~/.omo/agent` (`OMO_CODING_AGENT_DIR`, `SENPI_CODING_AGENT_DIR` or `PI_CODING_AGENT_DIR`).
   ([#350](https://github.com/devswha/herdr-web-ui/pull/350) by @Haeminway1)
+- Opening a pane in the chat lens leaves its terminal at the size it has. A phone's chat lens, its
+  keyboard included, no longer narrows the pane for a desktop showing it; switching to the terminal
+  lens still fits the pane to that device.
 
 ## [0.3.43] - 2026-10-02
 
