@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { claudeProcessSession, claudeProjectDir, claudeTranscriptFile, forgetClaudeSessions } from "./claude-store.ts";
@@ -50,6 +50,20 @@ describe("claudeProcessSession", () => {
     writeFileSync(path, JSON.stringify({ padding: "x".repeat(16 * 1024) }));
     expect(await claudeProcessSession(home, process.pid)).toBeNull();
     expect(await claudeProcessSession(home, -1)).toBeNull();
+  });
+
+  it.skipIf(process.platform !== "linux")("does not wait on a FIFO or follow a link in the record's place", async () => {
+    const home = nativeRecord();
+    const path = join(home, ".claude", "sessions", `${process.pid}.json`);
+    const target = join(home, "elsewhere.json");
+    renameSync(path, target);
+    symlinkSync(target, path);
+    expect(await claudeProcessSession(home, process.pid)).toBeNull();
+    rmSync(path);
+    expect(Bun.spawnSync(["mkfifo", path]).exitCode).toBe(0);
+    const started = Date.now();
+    expect(await claudeProcessSession(home, process.pid)).toBeNull();
+    expect(Date.now() - started).toBeLessThan(2000);
   });
 });
 

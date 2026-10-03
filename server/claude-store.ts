@@ -12,6 +12,7 @@
  * id is a UUID herdr reports, so at most one file answers to it.
  */
 
+import { constants } from "node:fs";
 import { open, readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -56,7 +57,8 @@ export function forgetClaudeSessions(): void {
 export async function claudeProcessSession(home: string, pid: number): Promise<string | null> {
   if (process.platform !== "linux" || !Number.isSafeInteger(pid) || pid <= 0) return null;
   try {
-    const file = await open(join(home, ".claude", "sessions", `${pid}.json`), "r");
+    // Non-blocking and no symlinks: a FIFO or a link in the record's place must not hang the read.
+    const file = await open(join(home, ".claude", "sessions", `${pid}.json`), constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW);
     let text: string;
     try {
       if (!(await file.stat()).isFile()) return null;
@@ -85,7 +87,7 @@ export async function claudeProcessSession(home: string, pid: number): Promise<s
   } catch (error) {
     // A closed process, absent/older native store or a torn write gives no identity.
     if (error instanceof SyntaxError || absent(error) ||
-      (error !== null && typeof error === "object" && "code" in error && ["EACCES", "EPERM", "ESRCH"].includes(String(error.code)))) return null;
+      (error !== null && typeof error === "object" && "code" in error && ["EACCES", "EPERM", "ESRCH", "ELOOP", "ENXIO"].includes(String(error.code)))) return null;
     throw error;
   }
 }

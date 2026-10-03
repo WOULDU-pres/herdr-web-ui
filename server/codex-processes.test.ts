@@ -147,6 +147,9 @@ for (const argv of [
   ["node", "--eval", "/usr/bin/codex", "resume", thread],
   ["node", "--require", "/usr/bin/codex", "resume", thread],
   ["node", "--no-warnings", "-e", "/usr/bin/codex", "resume", thread],
+  ["node", "--eval=setInterval(()=>{},1000)", "/usr/bin/codex", "resume", thread],
+  ["node", "--title", "/usr/bin/codex", "--eval=setInterval(()=>{},1000)", "resume", thread],
+  ["node", "--import=./hook.mjs", "/usr/bin/codex", "resume", thread],
   ["/usr/bin/not-codex", "resume", thread],
 ]) {
   it(`ignores unrelated executable or command arguments: ${argv.slice(0, 3).join(" ")}`, async () => {
@@ -164,6 +167,7 @@ for (const executable of [
   ["bash", "--", "/usr/bin/codex"],
   ["zsh", "/usr/bin/codex"],
   ["node", "--max-old-space-size=4096", "--no-warnings", "/usr/lib/codex.js"],
+  ["node", "--title=codex", "--enable-source-maps", "/usr/lib/codex.js"],
   ["C:\\tools\\codex.exe"],
   ["C:\\tools\\node.exe", "C:\\tools\\codex.js"],
 ]) {
