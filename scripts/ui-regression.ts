@@ -19,6 +19,7 @@ import { checkMobileViewport } from "./mobile-viewport-regression.ts";
 import { checkTerminalFileInput } from "./terminal-file-input-regression.ts";
 import { checkTerminalInput } from "./terminal-input-regression.ts";
 import { checkDefaultView } from "./default-view-regression.ts";
+import { checkNewSession } from "./new-session-regression.ts";
 import { checkComposerReconnect } from "./composer-reconnect-regression.ts";
 import { checkDroplet } from "./droplet-regression.ts";
 import { UsageService } from "../server/usage.ts";
@@ -487,6 +488,7 @@ try {
   await until(async () => (await page.locator(`.pane-select[title^="${created.pane_id} —"]`).getAttribute("aria-current")) === "true", "created pane selected");
   assert.equal(createRequests, 1);
   console.log("PASS session creation stays pending and opens one owned workspace");
+  await checkNewSession(browser, origin);
 
   // herdr 0.9.0 reports Codex's first directory-trust menu as idle. Exercise a
   // live, owned PTY menu so the chat controls cannot depend on a blocked badge.

@@ -16,6 +16,8 @@ export interface NewSessionDialogProps {
   open: boolean;
   machineName?: string;
   defaultCwd: string | null;
+  currentWorkspace: { workspace_id: string; label: string } | null;
+  defaultTarget?: "workspace" | "tab";
   onClose: () => void;
   onCreated: (paneId: string) => void;
 }
@@ -33,10 +35,11 @@ function directoryBasename(value: string): string {
   return trimmed.split("/").pop() ?? "";
 }
 
-export function NewSessionDialog({ open, defaultCwd, onClose, onCreated, machineName }: NewSessionDialogProps) {
+export function NewSessionDialog({ open, defaultCwd, currentWorkspace, defaultTarget = "workspace", onClose, onCreated, machineName }: NewSessionDialogProps) {
   const t = useT();
   const machineId = useMachineId();
-  const { createWorkspace, fetchAgentKinds } = useMachineApi();
+  const { createWorkspace, createTab, fetchAgentKinds } = useMachineApi();
+  const [target, setTarget] = useState(defaultTarget);
   const [agents, setAgents] = useState<AgentKind[]>([]);
   const [agentKind, setAgentKind] = useState(rememberedAgent);
   const [cwd, setCwd] = useState(defaultCwd ?? "");
@@ -48,10 +51,13 @@ export function NewSessionDialog({ open, defaultCwd, onClose, onCreated, machine
   const firstFieldRef = useRef<HTMLButtonElement>(null);
   const defaultCwdRef = useRef(defaultCwd);
   defaultCwdRef.current = defaultCwd;
+  const defaultTargetRef = useRef(defaultTarget);
+  defaultTargetRef.current = defaultTarget;
 
   useEffect(() => {
     if (!open) return;
     setCwd(defaultCwdRef.current ?? "");
+    setTarget(defaultTargetRef.current);
     setName("");
     setError(null);
     setPending(false);
@@ -104,11 +110,14 @@ export function NewSessionDialog({ open, defaultCwd, onClose, onCreated, machine
       } catch {
         /* private mode: the choice simply is not remembered */
       }
-      const result = await createWorkspace({
+      const request = {
         cwd: cwd.trim() || null,
         label: name.trim() || null,
         agent: agentKind ? { kind: agentKind } : null,
-      });
+      };
+      const result = target === "tab" && currentWorkspace
+        ? await createTab({ ...request, workspace_id: currentWorkspace.workspace_id })
+        : await createWorkspace(request);
       if (agentKind && !result.agent_started && result.error?.message) {
         setPending(false);
         setError(result.error.message);
@@ -138,6 +147,14 @@ export function NewSessionDialog({ open, defaultCwd, onClose, onCreated, machine
         </header>
         <div className="modal-body">
           <div className="field">
+            <label className="field-label" htmlFor="new-session-target">{t("Target")}</label>
+            <select id="new-session-target" className="select" value={target} disabled={fieldsDisabled} onChange={(event) => setTarget(event.target.value as "workspace" | "tab")}>
+              <option value="workspace">{t("New workspace")}</option>
+              <option value="tab" disabled={!currentWorkspace}>{t("New tab in current workspace")}</option>
+            </select>
+            {target === "tab" && currentWorkspace && <span className="field-hint">{t("Workspace: {name}", { name: currentWorkspace.label })}</span>}
+          </div>
+          <div className="field">
             <span className="field-label" id="new-session-agent">{t("Agent")}</span>
             <AgentPicker ref={firstFieldRef} agents={agents} value={agentKind} disabled={fieldsDisabled} labelledBy="new-session-agent" onChange={setAgentKind} />
           </div>
@@ -163,7 +180,7 @@ export function NewSessionDialog({ open, defaultCwd, onClose, onCreated, machine
               placeholder={directoryBasename(cwd)}
               onChange={(event) => setName(event.target.value)}
             />
-            <span className="field-hint">{t("Optional workspace label")}</span>
+            <span className="field-hint">{t(target === "tab" ? "Optional tab label" : "Optional workspace label")}</span>
           </label>
           {pending && <p className="new-session-note" role="status">{pendingLabel}</p>}
           {error && <p className="field-hint new-session-error" role="alert">{error}</p>}

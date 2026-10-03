@@ -145,6 +145,8 @@ export function App() {
   const [updateRemote, setUpdateRemote] = useState(false);
   const [machineDialog, setMachineDialog] = useState<Machine | "new" | null>(null);
   const [newSessionMachineId, setNewSessionMachineId] = useState("local");
+  const [newSessionWorkspace, setNewSessionWorkspace] = useState<{ workspace_id: string; label: string; cwd: string | null } | null>(null);
+  const [newSessionTarget, setNewSessionTarget] = useState<"workspace" | "tab">("workspace");
   const [health, setHealth] = useState<HealthInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   // null until the server has said whether it wants a token: the shell, and with it
@@ -530,6 +532,20 @@ export function App() {
     document.title = selectedTitle ? `${selectedTitle} · herdr` : APP_TITLE;
   }, [selectedTitle]);
 
+  const openNewSession = useCallback((machineId: string, workspaceId?: string) => {
+    const snapshot = machinesRef.current.find((machine) => machine.id === machineId)?.snapshot;
+    const selected = machineId === selectedMachineId ? snapshot?.panes.find((pane) => pane.pane_id === selectedPaneId) : undefined;
+    const pane = workspaceId
+      ? selected?.workspace_id === workspaceId ? selected : snapshot?.panes.find((pane) => pane.workspace_id === workspaceId)
+      : selected;
+    const workspace = snapshot?.workspaces.find((workspace) => workspace.workspace_id === (workspaceId ?? pane?.workspace_id));
+    setNewSessionWorkspace(workspace ? { workspace_id: workspace.workspace_id, label: workspace.label, cwd: pane?.cwd ?? null } : null);
+    setNewSessionTarget(workspaceId && workspace ? "tab" : "workspace");
+    setNewSessionMachineId(machineId);
+    setNewSessionOpen(true);
+    setDrawerOpen(false);
+  }, [selectedMachineId, selectedPaneId]);
+
   const actions = useMemo<AppActions>(
     () => ({
       selectPane,
@@ -542,11 +558,7 @@ export function App() {
       },
       setView,
       toggleView: () => setView(view === "chat" ? "terminal" : "chat"),
-      openNewSession: () => {
-        setDrawerOpen(false);
-        setNewSessionMachineId(selectedMachineId);
-        setNewSessionOpen(true);
-      },
+      openNewSession: () => openNewSession(selectedMachineId),
       openPalette: () => setPaletteOpen(true),
       openSettings: () => {
         setDrawerOpen(false);
@@ -562,7 +574,7 @@ export function App() {
       refresh: () => void load(),
       openFiles: selectedPaneId !== null ? () => { setDrawerOpen(false); setFilesOpen(true); } : null,
     }),
-    [selectPane, selectedPaneId, selectedMachineId, setView, view, updateSettings, resolvedTheme, canSignOut, lock, bellVisible, bell.on, enableNotifications, load],
+    [selectPane, selectedPaneId, selectedMachineId, openNewSession, setView, view, updateSettings, resolvedTheme, canSignOut, lock, bellVisible, bell.on, enableNotifications, load],
   );
 
   useShortcuts(actions, locked === false);
@@ -696,7 +708,7 @@ export function App() {
       <div className="app-body">
         <aside id="workspace-drawer" className={`sidebar${drawerOpen ? " is-open" : ""}`}>
           {error && <div className="error-state" role="alert"><p>{error}</p><button className="btn" onClick={() => void load()}>{t("Retry")}</button></div>}
-          <MachineSidebar version={health?.herdr?.version ?? null} machines={machines} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onAdd={() => { setUpdateRemote(false); setMachineDialog("new"); }} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewSessionOpen(true); setDrawerOpen(false); }} />
+          <MachineSidebar version={health?.herdr?.version ?? null} machines={machines} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onAdd={() => { setUpdateRemote(false); setMachineDialog("new"); }} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={openNewSession} />
         </aside>
 
         {drawerOpen && <div className="scrim" aria-hidden="true" onClick={() => setDrawerOpen(false)} />}
@@ -731,7 +743,9 @@ export function App() {
         key={newSessionMachineId}
         machineName={machines.find((m) => m.id === newSessionMachineId)?.name ?? newSessionMachineId}
         open={newSessionOpen}
-        defaultCwd={newSessionMachineId === selectedMachineId ? selectedPane?.cwd ?? null : null}
+        defaultCwd={newSessionWorkspace?.cwd ?? null}
+        currentWorkspace={newSessionWorkspace}
+        defaultTarget={newSessionTarget}
         onClose={() => setNewSessionOpen(false)}
         onCreated={(paneId) => {
           setNewSessionOpen(false);

@@ -226,6 +226,12 @@ export const JA: Record<string, string> = {
   "No matching panes or actions": "一致するペインや操作はありません",
 
   // ---- new session ----
+  "Target": "作成先",
+  "New workspace": "新しいワークスペース",
+  "New tab in current workspace": "現在のワークスペースに新しいタブ",
+  "Workspace: {name}": "ワークスペース: {name}",
+  "New tab in {name}": "{name}に新しいタブ",
+  "Optional tab label": "タブ名（任意）",
   "Close new session dialog": "新しいセッションのダイアログを閉じる",
   "Agent": "エージェント",
   "Directory": "ディレクトリ",

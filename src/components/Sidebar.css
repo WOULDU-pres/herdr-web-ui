@@ -220,12 +220,15 @@
   flex: 0 0 auto;
 }
 
-.workspace-rename {
+.workspace-rename,
+.workspace-new-tab {
   opacity: 0;
 }
 
 .workspace-header:hover .workspace-rename,
-.workspace-header:focus-within .workspace-rename {
+.workspace-header:focus-within .workspace-rename,
+.workspace-header:hover .workspace-new-tab,
+.workspace-header:focus-within .workspace-new-tab {
   opacity: 1;
 }
 
@@ -543,7 +546,8 @@
   /* no hover on touch: the grip stays, quiet, and the row actions are always there */
   .sidebar-drag-handle,
   .pane-actions,
-  .workspace-rename {
+  .workspace-rename,
+  .workspace-new-tab {
     opacity: 1;
   }
 }

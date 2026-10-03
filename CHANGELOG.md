@@ -8,6 +8,8 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 ## [Unreleased]
 
 ### Added
+- Start a session in a new tab of the selected pane's workspace, keeping its directory as the
+  default, or use the workspace row's + button. New workspace remains the default.
 - Native Windows x64 installation through `install.ps1`, with the same herdr plugin startup
   and updates. Windows needs Bun and Git, without Node or WSL, and keeps using the terminal
   screen mirror. ([#330](https://github.com/devswha/herdr-web-ui/pull/330) by @JJLiebig)

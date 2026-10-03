@@ -99,9 +99,10 @@ export interface SidebarProps {
   actions: AppActions;
   version: string | null;
   embedded?: boolean;
+  onNewTab?: (workspaceId: string) => void;
 }
 
-export function Sidebar({ snapshot, selectedPaneId, actions, version, embedded = false }: SidebarProps) {
+export function Sidebar({ snapshot, selectedPaneId, actions, version, embedded = false, onNewTab }: SidebarProps) {
   const t = useT();
   const { settings } = useSettings();
   const byFolder = settings.sidebarGrouping === "directory";
@@ -335,6 +336,9 @@ export function Sidebar({ snapshot, selectedPaneId, actions, version, embedded =
               </span>
             )}
             <StatusBadge status={workspace.agent_status} />
+            {onNewTab && <button type="button" className="sidebar-row-action workspace-new-tab" aria-label={t("New tab in {name}", { name: workspace.label })} title={t("New tab in {name}", { name: workspace.label })} onClick={() => onNewTab(workspace.workspace_id)}>
+              <Plus aria-hidden="true" />
+            </button>}
             <button type="button" className="sidebar-row-action workspace-rename" aria-label={t("Rename workspace {name}", { name: workspace.label })} onClick={() => beginWorkspaceRename(workspace, scope)}>
               <Pencil aria-hidden="true" />
             </button>
@@ -401,6 +405,9 @@ export function Sidebar({ snapshot, selectedPaneId, actions, version, embedded =
                     </span>
                   </div>
                   <div className="pane-actions">
+                    {merged && onNewTab && <button type="button" className="sidebar-row-action" aria-label={t("New tab in {name}", { name: workspace.label })} title={t("New tab in {name}", { name: workspace.label })} onClick={() => onNewTab(workspace.workspace_id)}>
+                      <Plus aria-hidden="true" />
+                    </button>}
                     <button type="button" className="sidebar-row-action" aria-label={t("Rename {title}", { title: displayTitle })} title={t("Rename pane")} onClick={() => beginPaneRename(pane)}>
                       <Pencil aria-hidden="true" />
                     </button>

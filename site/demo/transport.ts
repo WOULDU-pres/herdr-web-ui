@@ -53,6 +53,7 @@ const chats = new Map<string, { turns: ConversationTurn[]; metadata: { model: st
 let promptOpen = true;
 let promptId = PROMPT.id;
 let nextWorkspace = 100;
+let nextTab = 100;
 
 /** The OmO pane's background tasks (the composer's "2 background tasks"), timed from now. */
 const OMO_TASKS_PANE = "docs";
@@ -269,10 +270,17 @@ async function route(url: URL, method: string, init: RequestInit | undefined, in
     const pane = path === "/api/pane/close" ? paneOf(String(body["pane_id"] ?? "")) : snapshot().panes.find((p) => p.workspace_id === body["workspace_id"]);
     if (!pane) return error("not_found", "no such pane", 404);
     const snap = snapshot();
-    snap.panes = snap.panes.filter((p) => p.workspace_id !== pane.workspace_id);
-    snap.tabs = snap.tabs.filter((t) => t.workspace_id !== pane.workspace_id);
-    snap.workspaces = snap.workspaces.filter((w) => w.workspace_id !== pane.workspace_id);
-    snap.layouts = snap.layouts.filter((l) => (l as { workspace_id?: string }).workspace_id !== pane.workspace_id);
+    snap.panes = snap.panes.filter((p) => path === "/api/pane/close" ? p.pane_id !== pane.pane_id : p.workspace_id !== pane.workspace_id);
+    snap.tabs = snap.tabs.filter((t) => snap.panes.some((p) => p.tab_id === t.tab_id));
+    snap.workspaces = snap.workspaces.filter((w) => snap.panes.some((p) => p.workspace_id === w.workspace_id));
+    const workspace = snap.workspaces.find((w) => w.workspace_id === pane.workspace_id);
+    if (workspace) {
+      const tabs = snap.tabs.filter((t) => t.workspace_id === workspace.workspace_id);
+      workspace.pane_count = snap.panes.filter((p) => p.workspace_id === workspace.workspace_id).length;
+      workspace.tab_count = tabs.length;
+      if (!tabs.some((t) => t.tab_id === workspace.active_tab_id)) workspace.active_tab_id = tabs[0]!.tab_id;
+    }
+    snap.layouts = snap.layouts.filter((l) => snap.tabs.some((t) => t.tab_id === l.tab_id));
     structureChanged();
     return json({ ok: true });
   }
@@ -299,18 +307,24 @@ async function route(url: URL, method: string, init: RequestInit | undefined, in
     const dir = query.get("path") || "/home/demo";
     return json({ path: dir, parent: dir === "/" ? null : dir.replace(/\/[^/]*$/, "") || "/", home: "/home/demo", directories: dir === "/home/demo" ? ["checkout-api", "docs-site", "infra", "release", "web-dashboard"] : [], truncated: false, files: [] });
   }
-  if (path === "/api/workspace/create") {
+  if (path === "/api/workspace/create" || path === "/api/tab/create") {
     const body = await bodyOf(init, input);
+    const inWorkspace = path === "/api/tab/create";
     const agent = (body["agent"] as { kind?: string } | null | undefined)?.kind ?? null;
     const cwd = String(body["cwd"] ?? "/home/demo/new-project");
-    const id = `w${(nextWorkspace++).toString(36)}`;
     const snap = snapshot();
+    const workspace = inWorkspace ? snap.workspaces.find((w) => w.workspace_id === body["workspace_id"]) : undefined;
+    if (inWorkspace && !workspace) return error("not_found", "no such workspace", 404);
+    const id = workspace?.workspace_id ?? `w${(nextWorkspace++).toString(36)}`;
+    const tabId = inWorkspace ? `${id}:t${(nextTab++).toString(36)}` : `${id}:t1`;
+    const paneId = inWorkspace ? `${tabId}:p1` : `${id}:p1`;
     const template = snap.panes[0]!;
     const label = String(body["label"] ?? "") || cwd.split("/").pop() || "new";
-    const pane: Pane = { ...structuredClone(template), pane_id: `${id}:p1`, tab_id: `${id}:t1`, terminal_id: `${id}:term`, workspace_id: id, label: null, title: null, agent, agent_session: null, agent_status: agent ? "working" : "unknown", cwd, foreground_cwd: cwd, focused: false, terminal_title: null, terminal_title_stripped: null, revision: 1 };
+    const pane: Pane = { ...structuredClone(template), pane_id: paneId, tab_id: tabId, terminal_id: `${paneId}:term`, workspace_id: id, label: null, title: null, agent, agent_session: null, agent_status: agent ? "working" : "unknown", cwd, foreground_cwd: cwd, focused: false, terminal_title: null, terminal_title_stripped: null, revision: 1 };
     snap.panes.push(pane);
-    snap.tabs.push({ ...structuredClone(snap.tabs[0]!), tab_id: `${id}:t1`, workspace_id: id, label, number: 1, agent_status: pane.agent_status, focused: false, pane_count: 1 });
-    snap.workspaces.push({ ...structuredClone(snap.workspaces[0]!), workspace_id: id, label, number: snap.workspaces.length + 1, active_tab_id: `${id}:t1`, agent_status: pane.agent_status, focused: false, pane_count: 1, tab_count: 1 });
+    snap.tabs.push({ ...structuredClone(snap.tabs[0]!), tab_id: tabId, workspace_id: id, label, number: workspace ? workspace.tab_count + 1 : 1, agent_status: pane.agent_status, focused: false, pane_count: 1 });
+    if (workspace) { workspace.pane_count += 1; workspace.tab_count += 1; }
+    else snap.workspaces.push({ ...structuredClone(snap.workspaces[0]!), workspace_id: id, label, number: snap.workspaces.length + 1, active_tab_id: tabId, agent_status: pane.agent_status, focused: false, pane_count: 1, tab_count: 1 });
     if (agent) {
       keyOfPane.set(pane.pane_id, pane.pane_id);
       chats.set(pane.pane_id, { turns: [], metadata: { model: agent === "codex" ? "gpt-5.6-sol" : "claude-opus-5-5", reasoning_effort: "medium" } });

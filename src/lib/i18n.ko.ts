@@ -224,6 +224,12 @@ export const KO: Record<string, string> = {
   "No matching panes or actions": "일치하는 패널이나 동작이 없습니다",
 
   // ---- new session ----
+  "Target": "생성 대상",
+  "New workspace": "새 워크스페이스",
+  "New tab in current workspace": "현재 워크스페이스에 새 탭",
+  "Workspace: {name}": "워크스페이스: {name}",
+  "New tab in {name}": "{name}에 새 탭",
+  "Optional tab label": "탭 이름 (선택)",
   "Close new session dialog": "새 세션 창 닫기",
   "Agent": "에이전트",
   "Directory": "폴더",

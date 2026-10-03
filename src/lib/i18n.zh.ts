@@ -228,6 +228,12 @@ export const ZH: Record<string, string> = {
   "No matching panes or actions": "没有匹配的窗格或操作",
 
   // ---- new session ----
+  "Target": "创建位置",
+  "New workspace": "新建工作区",
+  "New tab in current workspace": "在当前工作区新建标签页",
+  "Workspace: {name}": "工作区：{name}",
+  "New tab in {name}": "在 {name} 中新建标签页",
+  "Optional tab label": "标签页名称（可选）",
   "Close new session dialog": "关闭新建会话对话框",
   "Agent": "Agent",
   "Directory": "目录",

@@ -41,6 +41,7 @@ import {
   paneSendText,
   ping,
   sessionSnapshot,
+  tabCreate,
   workspaceClose,
   workspaceCreate,
   workspaceMove,
@@ -991,15 +992,19 @@ export function createServer(
         return listing === null ? badRequest("invalid_cwd", "path must be a directory this user can read") : jsonResponse(listing);
       }
 
-      if (pathname === "/api/workspace/create") {
+      if (pathname === "/api/workspace/create" || pathname === "/api/tab/create") {
+        const inWorkspace = pathname === "/api/tab/create";
         if (request.method !== "POST") return badRequest("method_not_allowed", "use POST");
-        let payload: { cwd?: unknown; label?: unknown; agent?: { kind?: unknown; name?: unknown; args?: unknown } | null };
+        let payload: { workspace_id?: unknown; cwd?: unknown; label?: unknown; agent?: { kind?: unknown; name?: unknown; args?: unknown } | null };
         try {
           payload = (await request.json()) as typeof payload;
         } catch {
           return badRequest("invalid_json", "request body must be JSON");
         }
         if (!isJsonObject(payload)) return badRequest("invalid_body", "request body must be a JSON object");
+        if (inWorkspace && (typeof payload.workspace_id !== "string" || !payload.workspace_id.trim())) {
+          return badRequest("missing_workspace_id", "workspace_id is required");
+        }
         // the client sends null for "not given": treat it exactly like an absent field
         if (payload.cwd === null) delete payload.cwd;
         if (payload.label === null) delete payload.label;
@@ -1018,12 +1023,16 @@ export function createServer(
         // agent.start can legitimately take a minute; Bun's default idle timeout is shorter.
         if (payload.agent) bunServer.timeout(request, 75);
         try {
-          const created = await workspaceCreate({
+          const options = {
             ...(cwd === undefined || cwd === null ? {} : { cwd }),
             ...(typeof payload.label === "string" ? { label: payload.label } : {}),
-          });
+          };
+          const created = inWorkspace
+            ? await tabCreate({ ...options, workspaceId: payload.workspace_id as string })
+            : await workspaceCreate(options);
+          const workspaceId = created.tab.workspace_id;
           if (!payload.agent) {
-            return jsonResponse({ workspace_id: created.workspace.workspace_id, pane_id: created.root_pane.pane_id, agent_started: false });
+            return jsonResponse({ workspace_id: workspaceId, pane_id: created.root_pane.pane_id, agent_started: false });
           }
           try {
             const kind = payload.agent.kind as string;
@@ -1032,7 +1041,7 @@ export function createServer(
               const given = typeof payload.agent.name === "string" && payload.agent.name.length > 0 ? payload.agent.name : null;
               // herdr refuses a name another agent holds. Two creations at once can pick the same
               // free one: the refused one picks again. It also refuses a pane whose shell is not up
-              // yet (`agent_pane_busy`, herdr 0.9.3), which a workspace made a moment ago can be.
+              // yet (`agent_pane_busy`, herdr 0.9.3), which a pane made a moment ago can be.
               const shellDeadline = Date.now() + 10_000;
               for (let attempt = 1; ; ) {
                 try {
@@ -1055,10 +1064,10 @@ export function createServer(
                 }
               }
             }
-            return jsonResponse({ workspace_id: created.workspace.workspace_id, pane_id: created.root_pane.pane_id, agent_started: true });
+            return jsonResponse({ workspace_id: workspaceId, pane_id: created.root_pane.pane_id, agent_started: true });
           } catch (error) {
             return jsonResponse({
-              workspace_id: created.workspace.workspace_id,
+              workspace_id: workspaceId,
               pane_id: created.root_pane.pane_id,
               agent_started: false,
               error: {
