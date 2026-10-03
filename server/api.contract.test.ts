@@ -8,6 +8,9 @@ import { UsageService } from "./usage.ts";
 import { VoiceService } from "./voice.ts";
 import { herdrRpc, ping, workspaceCreate, workspaceClose } from "./herdr/client.ts";
 import { startFakePushService, type FakePushService } from "./push.fake.ts";
+import { descriptorPath, type BridgeDescriptor } from "./bridge.ts";
+import { handleMachineRequest } from "./machine-api.ts";
+import type { MachineManager } from "./machines.ts";
 
 /**
  * Contract test for herdr-web-ui's HTTP + WS surface.
@@ -241,6 +244,49 @@ describe("tab creation", () => {
     }
   });
 
+  it("supports the authenticated local-PC alias without allowing other tab routes", async () => {
+    const owned = await workspaceCreate({ cwd: tmpdir(), label: "herdr-web-ui-test-tab-local-alias" });
+    try {
+      const res = await fetch(`${base()}/api/machines/local/tab/create`, {
+        method: "POST", headers: { "content-type": "application/json", "x-herdr-machine": "1" },
+        body: JSON.stringify({ workspace_id: owned.workspace.workspace_id, agent: null }),
+      });
+      expect(res.status).toBe(200);
+      const created = await res.json() as WorkspaceCreated;
+      expect(created).toMatchObject({ workspace_id: owned.workspace.workspace_id, agent_started: false });
+      expect(created.pane_id).not.toBe(owned.root_pane.pane_id);
+      expect((await fetch(`${base()}/api/machines/local/tab/close`)).status).toBe(400);
+    } finally { await workspaceClose(owned.workspace.workspace_id); }
+  });
+
+  it("forwards remote tab creation using the registered bridge token", async () => {
+    const owned = await workspaceCreate({ cwd: tmpdir(), label: "herdr-web-ui-test-tab-bridge" });
+    const state = mkdtempSync(join(tmpdir(), "herdr-web-ui-tab-bridge-"));
+    const bridge = createServer({ port: 0, hostname: "127.0.0.1", token: "test-browser-token", machines: false, registerBridge: true, stateDir: state, tailscaleOwner: null });
+    const registered = JSON.parse(readFileSync(descriptorPath(), "utf8")) as BridgeDescriptor;
+    const endpoint = `http://127.0.0.1:${bridge.port}`;
+    const manager = { endpoint: (id: string) => id === "tab-remote" ? { url: endpoint, token: registered.token } : null, trackTerminal: () => () => {} } as unknown as MachineManager;
+    try {
+      const request = () => new Request("http://127.0.0.1/api/machines/tab-remote/tab/create", {
+        method: "POST", headers: { "content-type": "application/json", "x-herdr-machine": "1" },
+        body: JSON.stringify({ workspace_id: owned.workspace.workspace_id, cwd: tmpdir(), agent: null }),
+      });
+      // The browser token is deliberately absent: the proxy must authenticate with the bridge token.
+      expect((await fetch(`${endpoint}/api/tab/create`, { method: "POST", body: "{}" })).status).toBe(401);
+      const res = await handleMachineRequest(request(), manager);
+      expect(res.status).toBe(200);
+      const created = await res.json() as WorkspaceCreated;
+      expect(created).toMatchObject({ workspace_id: owned.workspace.workspace_id, agent_started: false });
+      expect(created.pane_id).not.toBe(owned.root_pane.pane_id);
+      const management = await fetch(`${endpoint}/api/machines`, { headers: { authorization: `Bearer ${registered.token}` } });
+      expect(management.status).toBe(401);
+    } finally {
+      bridge.stop();
+      await workspaceClose(owned.workspace.workspace_id);
+      rmSync(state, { recursive: true, force: true });
+    }
+  });
+
   it("shares unique agent names across concurrent tabs and preserves a tab when an explicit name collides", async () => {
     const first = await fetch(`${base()}/api/workspace/create`, {
       method: "POST", headers: { "content-type": "application/json" },
@@ -285,6 +331,9 @@ describe("tab creation", () => {
       expect(res.status).toBe(200);
       expect(created).toMatchObject({ workspace_id: owned.workspace.workspace_id, agent_started: true });
       expect(created.pane_id).not.toBe(owned.root_pane.pane_id);
+      // Foreground-process discovery can precede the fixture's first filesystem write.
+      const deadline = Date.now() + 3_000;
+      while (!existsSync(record) && Date.now() < deadline) await Bun.sleep(25);
       expect(JSON.parse(readFileSync(record, "utf8"))).toEqual(args);
     } finally {
       process.env["PATH"] = path;
