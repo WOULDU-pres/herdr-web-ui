@@ -1,0 +1,1 @@
+PASS browser demo creates a sibling tab and closing it preserves the original workspace

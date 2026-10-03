@@ -1,0 +1,330 @@
+$ bun scripts/ci-tests.ts integration
+integration: 17 test files
+bun test v1.4.2 (744846f84)
+
+scripts/phone-setup.contract.test.ts:
+(pass) herdr loads the Phone setup entrypoint and keeps its QR and code visible in a pane [268.14ms]
+
+server/api.contract.test.ts:
+(pass) usage API > answers the report and keeps it behind the token gate [38.83ms]
+(pass) voice API > keeps the key on the server, refuses cross-site writes and streams a transcript [31.06ms]
+(pass) update API > reports unmanaged servers without performing network discovery [1.02ms]
+(pass) update API > refuses cross-site/form update requests and unmanaged installs [1.53ms]
+(pass) update API > keeps status and update actions behind the token gate [6.78ms]
+(pass) phone access > says how a phone can reach this server, whatever Tailscale is doing on this machine [148.20ms]
+(pass) phone access > stays behind the token gate [5.22ms]
+(pass) mutation body validation > rejects non-object JSON without touching herdr or losing the error envelope [21.05ms]
+(pass) mutation body validation > rejects invalid pane identifiers and key/image fields before RPCs [2.66ms]
+(pass) tab creation > requires an explicit workspace and validates fields before creating a tab [10.37ms]
+(pass) tab creation > creates a sibling tab with its own cwd and label without adding a workspace [18.72ms]
+(pass) tab creation > shares unique agent names across concurrent tabs and preserves a tab when an explicit name collides [538.36ms]
+(pass) tab creation > starts a shell agent in the new tab with its arguments intact [536.00ms]
+(pass) tab creation > returns the created tab when a shell agent is unavailable [10.94ms]
+(pass) workspace and discovery endpoints > lists agent kinds with required fallbacks sorted by display label [2.75ms]
+(pass) workspace and discovery endpoints > offers omo and gjc, which herdr cannot start, exactly when they are on PATH [4.86ms]
+(pass) workspace and discovery endpoints > rejects a workspace cwd that is not an existing directory [1.05ms]
+(pass) workspace and discovery endpoints > creates, edits, searches, inspects, and closes an owned workspace [49.27ms]
+(pass) workspace and discovery endpoints > starts another agent of a kind whose name is already taken [46.74ms]
+(pass) workspace and discovery endpoints > uses the shared error envelope for malformed mutation bodies [3.77ms]
+(pass) GET /api/pane/omo-tasks > answers 400 without a pane, and no tasks for a pane that runs no OmO [2.85ms]
+(pass) GET /api/session > returns the live herdr snapshot with at least one real workspace [2.13ms]
+(pass) /api/pane/scroll and /api/pane/selection > reads and sets the viewport position of a real pane [6.88ms]
+(pass) /api/pane/scroll and /api/pane/selection > reads a selection from the pane's history [3.24ms]
+(pass) /api/pane/scroll and /api/pane/selection > rejects bad coordinates and offsets before any RPC [4.61ms]
+(pass) GET /api/pane/read > returns terminal text for a real live pane [2.63ms]
+(pass) GET /api/pane/read > rejects an unknown pane id with a clean JSON error and keeps serving [1.71ms]
+(pass) GET /api/pane/read > rejects a missing pane_id parameter [0.47ms]
+(pass) POST /api/pane/close > closes the named pane and it leaves the snapshot [5.53ms]
+(pass) POST /api/pane/close > answers the error envelope for an unknown pane [1.26ms]
+(pass) POST /api/pane/close > rejects a missing pane_id with 400 missing_pane_id [0.78ms]
+(pass) POST /api/pane/image > stores a pasted image under the pane cwd and returns its absolute path [102.57ms]
+(pass) POST /api/pane/image > rejects an unknown pane with the shared error envelope [2.68ms]
+(pass) POST /api/pane/image > stores any other file under its own sanitised name [5.27ms]
+(pass) POST /api/pane/image > rejects an image above the size ceiling with 413 [42.16ms]
+(pass) POST /api/pane/image > rejects empty image data with 400 [3.59ms]
+(pass) POST /api/pane/image > rejects a missing pane_id with 400 and keeps serving [1.97ms]
+(pass) WebSocket /ws > pushes a snapshot on connect and streams real pty bytes for an attached pane [292.98ms]
+(pass) WebSocket /ws > rejects a malformed websocket frame without dropping the connection [3.24ms]
+(pass) WebSocket roles and status push > rejects input from a non-attached client and signals readiness to the owner [243.01ms]
+(pass) WebSocket roles and status push > never resizes the shared pty for an observe connection, and read-only frames answer input, keys and resize [262.30ms]
+(pass) WebSocket roles and status push > rejects an unknown role mode with an in-band error [2.83ms]
+(pass) WebSocket roles and status push > pushes pane-status and pane-exited for a pane nobody is attached to [4310.85ms]
+(pass) WebSocket observer-first attach > sizes a PTY an observe connection creates from the pane, never from the observer's grid [5.76ms]
+(pass) WebSocket concurrent attach > shares one pty between clients whose attaches to the same pane race [144.01ms]
+(pass) WebSocket client leaving mid-attach > never pins the pty for a client that disconnects before its attach is ready [282.06ms]
+(pass) WebSocket client leaving mid-attach > never pins the pty for a client that detaches before its attach is ready [228.97ms]
+(pass) web push > hands out its VAPID key and refuses what is not a subscription [2.81ms]
+(pass) web push > confirms a new device with a push it can decrypt, and forgets it on request [17.79ms]
+(pass) web push > pushes a live pane's status change to a subscribed device [2554.36ms]
+(pass) web push > reports a Codex unknown after work as done over WS and HTTP and delivers its completion push [3733.35ms]
+web push to 127.0.0.1:36865 failed: no response
+(pass) web push > alerts on the very first change after a restart, measured against herdr's snapshot [535.46ms]
+(pass) pairing and identity > lets this PC in, and not a proxied request with no login while the PC's Tailscale login is known [3.53ms]
+(pass) pairing and identity > does not take a proxied request for this PC when the proxy sends no X-Forwarded-For [4.11ms]
+(pass) pairing and identity > trusts the PC's own Tailscale login and refuses another [1.75ms]
+(pass) pairing and identity > takes the login named in HERDR_WEB_TAILSCALE_OWNER for the PC's own, as a tagged node needs [5.75ms]
+(pass) pairing and identity > never treats a Funnel request as open [0.54ms]
+(pass) pairing and identity > pairs a device with a code from this PC, and the gate closes for strangers [5.78ms]
+(pass) pairing and identity > renames and revokes a device; signing out drops its cookie [3.57ms]
+herdr events: pane_not_found: pane wK:p1 not found
+(pass) pairing and identity > the plugin script prints a code a headless PC's owner can hand to a phone [867.13ms]
+(pass) pairing and identity > a configured token gates this PC and its Tailscale login, and a paired device gets past it [10.38ms]
+(pass) token auth > rejects an unauthenticated API call with 401 unauthorized [3.95ms]
+(pass) token auth > keeps web push behind the gate: a subscription receives pane titles [1.72ms]
+(pass) token auth > keeps the image upload behind the gate [0.57ms]
+(pass) token auth > keeps /api/health public and advertises the gate state [0.98ms]
+(pass) token auth > refuses a token that does not match [0.67ms]
+(pass) token auth > hands back a hardened session cookie for the right token [0.67ms]
+(pass) token auth > accepts the session cookie [1.80ms]
+(pass) token auth > accepts a bearer token [1.22ms]
+(pass) token auth > expires the cookie on logout [0.62ms]
+(pass) token auth > never upgrades a websocket without a token [0.97ms]
+(pass) token auth > upgrades a websocket that carries the cookie [1.64ms]
+(pass) bind address > serves the API on the requested hostname [3.38ms]
+(pass) generated wire types > carries an unknown agent_status through instead of dropping or throwing [1.50ms]
+(pass) PC management API > reports bridge auth independently of herdr and exposes the local PC [2.98ms]
+(pass) PC management API > rejects CSRF, malformed targets and remote forwarding outside the allowlist [3.56ms]
+(pass) PC management API > gates PC metadata, setup and SSE behind the existing token [6.28ms]
+(pass) terminal lens of a bridge without the PTY sidecar > reports a mirror from /api/health and /api/bridge though herdr itself can attach [9.53ms]
+(pass) terminal lens of a bridge without the PTY sidecar > passes herdr's own answer through where the sidecar runs [9.56ms]
+(pass) refuses cross-origin changes while allowing same-origin and CLI requests [121.27ms]
+
+server/attach-held.contract.test.ts:
+(pass) a terminal another web bridge holds > waits for that bridge instead of ending, then attaches when it lets go [2306.96ms]
+(pass) an attach classified as held > is only herdr's own refusal: an attach that ends on other output ends the terminal [952.67ms]
+(pass) an attach classified as held > gives a read race after the wait its full retry budget [1119.98ms]
+(pass) an attach classified as held > is not pane output that shows herdr's refusal: a live attach whose screen has it is painted and resumes [491.06ms]
+(pass) an attach classified as held > is not resumed by the attach's own setup bytes when herdr's refusal comes after them [1327.67ms]
+(pass) an attach classified as held > keeps the pane held when a refusal's exit is overdue, and tries again instead of resuming [2977.91ms]
+
+server/codex-binding.contract.test.ts:
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in wZ:p1
+      at <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:137:24)
+(fail) reads the thread a Codex TUI was resumed on while none of its answers is on screen, until a newer thread begins [10198.39ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w0:p1
+      at <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:152:24)
+(fail) keeps a matched rollout while tool output scrolls the answer away, and drops it for another process [10091.23ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w11:p1
+      at <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:179:29)
+(fail) reads a thread whose answers are all short by its newest answers on screen, and never rebinds a matched pane by them [10106.30ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w12:p1
+      at <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:238:24)
+(fail) drops a matched rollout once a newer interactive thread begins in its cwd, as /new does, not for a subagent or codex exec [10087.46ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w13:p1
+      at <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:262:24)
+(fail) keeps a matched rollout when the newer thread shows in another Codex pane, whether or not its chat was opened [10288.58ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w14:p1
+      at <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:285:24)
+(fail) finds a pane's thread however many codex exec runs the repo had since [10187.48ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w15:p1
+      at <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:296:24)
+(fail) claims nothing for a pane whose screen matches this pane's thread as well, nor for a closed pane [10092.55ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w16:p1
+      at <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/home/hwjoo/01-projects/2026/hwjoo-tools/herdr-web-ui-tab-create/server/codex-binding.contract.test.ts:322:26)
+(fail) takes the thread herdr has for a Codex pane as a hint: the shared daemon reports every TUI's thread to the pane that started it [10410.10ms]
+
+server/codex.contract.test.ts:
+(pass) serves native Codex conversations and invalidates replaced files even at the same byte size [29.07ms]
+(pass) answers an unchanged conversation with a bodyless 304 and a changed one in full [13.66ms]
+(pass) serves a native image-only Codex turn through the pane-scoped image API [23.57ms]
+(pass) serves skill activity without shipping the selected skill's instruction body [5.00ms]
+
+server/device-access.contract.test.ts:
+(pass) revocation closes an active device's terminal and roster stream without disconnecting another device [429.82ms]
+Cannot read /tmp/herdr-device-recovery-lpzVuJ/devices.json. Restore a valid devices.json or fix its permissions, then restart the server. External access without a token or trusted Tailscale login remains blocked.
+(pass) a corrupt device registry refuses strangers while keeping local recovery and the original file [6.86ms]
+(pass) watch credentials cannot mutate HTTP state, read credential files, or elevate local and relayed terminals [231.01ms]
+(pass) revoking a paired device removes its persistent push subscription [23.42ms]
+(pass) returns an error when revocation cannot be persisted, then allows a successful retry [7.48ms]
+
+server/gjc.contract.test.ts:
+(pass) reads the foreground GJC session after its process changes directory, not another session in the pane cwd [264.45ms]
+(pass) binds same-cwd panes to their own files regardless of which transcript was modified last [1044.40ms]
+(pass) binds a pane whose session holds a subagent's file open to the session, not the subagent [518.62ms]
+(pass) restores a directory-only runtime using its fresh terminal breadcrumb, without cwd recency [626.41ms]
+(pass) restores a directory-only runtime by unique visible assistant text, never newest-file order [528.59ms]
+(pass) starts the gjc this server found on its PATH, by absolute path, and waits until it runs in the pane [261.17ms]
+
+server/herdr/client.test.ts:
+(pass) ping > reaches the live herdr server and reports its protocol [0.44ms]
+(pass) sessionSnapshot > returns the live workspace/tab/pane tree [0.66ms]
+(pass) sessionSnapshot > issues a fresh connection per call, so sequential calls both succeed [0.85ms]
+(pass) paneRead > returns terminal text for a live pane and echoes its id [1.23ms]
+(pass) paneRead > keeps escape sequences when reading ansi [0.73ms]
+(pass) paneRead > rejects an unknown pane with a coded HerdrError [0.41ms]
+(pass) subscribeEvents > opens a streaming connection and closes cleanly [0.72ms]
+(pass) subscribeEvents > reports a connect that fails as closed, so a subscriber retrying on close retries [0.17ms]
+
+server/omo-prompt.contract.test.ts:
+(pass) answers to omo's form of several questions > asks one question at a time, each answer back once the form shows the next step [1186.27ms]
+(pass) slash commands of a pane herdr names pi > offers pi's commands to pi, and none of them to an omo pane that waits under pi's name [589.08ms]
+
+server/omo.contract.test.ts:
+(pass) labels a running omo pane when herdr supplies no agent kind [217.11ms]
+(pass) leaves a shell labelled OmO DAG without an agent kind [6.27ms]
+(pass) uses live process evidence and stops cwd inference as soon as a second omo shares it [783.28ms]
+(pass) starts omo through the pane's shell and waits until omo is its foreground process [1766.04ms]
+(pass) binds each omo pane in a shared cwd to the session its process holds [1252.59ms]
+(pass) ignores the background task logs omo holds open outside its session store [213.24ms]
+
+server/output.contract.test.ts:
+(pass) real terminal output flow control > waits for the old attach to retire when a pane is reopened immediately [502.48ms]
+(pass) real terminal output flow control > bounds a stalled observer, releases the operator, and leaves the pane alive [5027.50ms]
+(pass) real terminal output flow control > resumes on valid ACKs and rejects future credit without accepting stale subscriptions [3168.85ms]
+terminal attach for pane w28:p1 failed to start: Executable not found in $PATH: "node"
+(pass) a terminal attach that cannot spawn (#154) > reports the failure and leaves the pane attachable, never a record without a pty [391.34ms]
+(pass) an attach herdr refuses over a read in progress > attaches again for the same client instead of ending its terminal [845.46ms]
+terminal attach for pane w2A:p1 failed to start: Executable not found in $PATH: "node"
+(pass) an attach herdr refuses over a read in progress > ends the terminal, not the server, when a retried attach cannot spawn [382.02ms]
+(pass) an attach herdr refuses over a read in progress > still ends the terminal when herdr keeps refusing past the longest such read [1079.78ms]
+
+server/pi.contract.test.ts:
+(pass) serves a pi pane's native transcript over HTTP [7.05ms]
+(pass) offers a tool's own picture over the image endpoint [8.26ms]
+(pass) resolves pi's context window from the agent dir pi reads its models from [6.62ms]
+(pass) follows the pane to a new session file when /new or /resume replaces it [6.22ms]
+(pass) shows the branch /tree leaves the leaf on, and invalidates the pages held before it [5.64ms]
+(pass) counts the turns a /tree left behind, over HTTP [8.66ms]
+(pass) falls back to the scrollback when the reported path leaves the store [3.12ms]
+
+server/prompt.contract.test.ts:
+(pass) answers to Claude's unnumbered menus > moves the cursor to the row answered, then confirms it [41.51ms]
+(pass) answers to Claude's unnumbered menus > confirms nothing when the cursor lands on a row the card does not show [959.47ms]
+(pass) answers to Claude's unnumbered menus > confirms nothing when the cursor moved past the row meanwhile [860.14ms]
+(pass) answers to pi's dialogs > offers the card while pi reports the pane idle, and answers the row it showed [68.30ms]
+(pass) answers to pi's dialogs > presses No on a confirmation rather than cancelling it [36.61ms]
+
+server/pty/session.test.ts:
+(pass) PtySession > forwards extra env to the command running on the pty [35.67ms]
+(pass) PtySession > delivers split UTF-8 and the entire final burst before reporting the exit code [123.88ms]
+(pass) PtySession > stops output reads while keeping Ctrl+C input live, then resumes without loss [472.20ms]
+(pass) PtySession > reaps both processes when the last client leaves with output paused [214.49ms]
+
+server/secret.contract.test.ts:
+(pass) a secret on a mirrored pane is typed as text, entered with the Enter key, and answered once herdr took both [476.85ms]
+(pass) a secret herdr refused on a mirrored pane is answered as failed, with no Enter pressed [478.79ms]
+(pass) secret frames validate prompts and authority, never queue, and type one no-echo line [902.14ms]
+
+server/submit.contract.test.ts:
+(pass) WebSocket submit > lists the submit feature in the first snapshot [127.88ms]
+(pass) WebSocket submit > types the payload into a pane without an agent, then its own Enter SUBMIT_DELAY_MS later, and says so [152.98ms]
+(pass) WebSocket submit > hands an agent the message through herdr's agent.prompt: the paste, then Enter apart [454.04ms]
+(pass) WebSocket submit > refuses a message while the agent waits for an answer, typing nothing [413.83ms]
+(pass) WebSocket submit > types the terminal's input line into a waiting agent like the keyboard, then its Enter [155.28ms]
+(pass) WebSocket submit > still hands a message to a Codex blocked only by questions waiting collapsed in its queue [153.44ms]
+(pass) WebSocket submit > never types a message into an approval under the queue, nor for an agent other than Codex [797.42ms]
+(pass) WebSocket submit > keeps other input behind a message in flight: a Stop right after Send lands after its Enter [555.38ms]
+(pass) WebSocket submit > sends a message typed right after a Stop only once the Stop reached the pane [930.86ms]
+(pass) WebSocket submit > types nothing of a message that waited past its deadline behind another [568.89ms]
+(pass) WebSocket submit > still sends the Enter after the sender is gone [298.70ms]
+(pass) WebSocket submit > sends nothing typed or keyed by a connection that closed while it waited behind a message [609.17ms]
+(pass) WebSocket submit > answers a submit from an observe connection with read_only, typing nothing [437.35ms]
+(pass) a herdr without terminal attach (Windows) > mirrors the pane's screen: the pane's own grid first, then each changed screen, until the pane ends [463.71ms]
+(pass) a herdr without terminal attach (Windows) > hands several lines for an agent on a mirrored pane over as one paste, typed or sent, and bare where no agent is [560.21ms]
+(pass) a herdr without terminal attach (Windows) > keeps unattached typing behind a message in flight: a Stop right after Send lands after its Enter [278.40ms]
+(pass) typing without terminal attach, at the edges > takes its turn before herdr has said what it can do: a message sent meanwhile does not overtake it [285.90ms]
+(pass) typing without terminal attach, at the edges > sends nothing typed by a connection that closed while it waited its turn [434.32ms]
+(pass) herdr unreachable when a terminal is asked for > answers the attach with an in-band error and attaches once herdr is back [208.38ms]
+
+server/updater.test.ts:
+(pass) managed source updates with real Git repositories and builds > checks without installing, then builds an exact revision without changing the source [165.83ms]
+(pass) managed source updates with real Git repositories and builds > refuses local changes, detached branches, and an ahead/diverged history [98.65ms]
+(pass) managed source updates with real Git repositories and builds > updates a herdr-managed plugin checkout: shallow, detached, owned by herdr [159.72ms]
+(pass) managed source updates with real Git repositories and builds > follows only plain vX.Y.Z tags: untagged commits, bundle tags and pre-releases stay put [188.22ms]
+(pass) managed source updates with real Git repositories and builds > treats a shallow plugin checkout ahead of the latest release as up to date [150.30ms]
+(pass) managed source updates with real Git repositories and builds > leaves the current release intact on build failure and cleans the failed stage [115.27ms]
+(pass) managed source updates with real Git repositories and builds > does not persist a candidate that failed startup [115.24ms]
+(pass) managed source updates with real Git repositories and builds > automatically installs when enabled and coalesces overlapping requests [109.87ms]
+(pass) managed source updates with real Git repositories and builds > cancels an update command with a deadline [141.18ms]
+(pass) managed source updates with real Git repositories and builds > does not repeatedly restart into the same failed automatic update, including after restart [223.30ms]
+(pass) managed source updates with real Git repositories and builds > restarts the real bridge over IPC, rolls back a failed boot, and resumes the saved release [2725.83ms]
+(pass) managed source updates with real Git repositories and builds > hands over to the installed release's own supervisor [998.63ms]
+(pass) managed source updates with real Git repositories and builds > falls back to the previous supervisor when the new one cannot start [887.71ms]
+
+8 tests failed:
+(fail) reads the thread a Codex TUI was resumed on while none of its answers is on screen, until a newer thread begins [10198.39ms]
+(fail) keeps a matched rollout while tool output scrolls the answer away, and drops it for another process [10091.23ms]
+(fail) reads a thread whose answers are all short by its newest answers on screen, and never rebinds a matched pane by them [10106.30ms]
+(fail) drops a matched rollout once a newer interactive thread begins in its cwd, as /new does, not for a subagent or codex exec [10087.46ms]
+(fail) keeps a matched rollout when the newer thread shows in another Codex pane, whether or not its chat was opened [10288.58ms]
+(fail) finds a pane's thread however many codex exec runs the repo had since [10187.48ms]
+(fail) claims nothing for a pane whose screen matches this pane's thread as well, nor for a closed pane [10092.55ms]
+(fail) takes the thread herdr has for a Codex pane as a hint: the shared daemon reports every TUI's thread to the pane that started it [10410.10ms]
+
+ 176 pass
+ 8 fail
+ 952 expect() calls
+Ran 184 tests across 17 files. [151.94s]
+error: script "test:integration" exited with code 1

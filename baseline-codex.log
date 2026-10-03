@@ -1,0 +1,103 @@
+bun test v1.4.2 (744846f84)
+
+server/codex-binding.contract.test.ts:
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w2:p1
+      at <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:137:24)
+(fail) reads the thread a Codex TUI was resumed on while none of its answers is on screen, until a newer thread begins [10103.05ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w3:p1
+      at <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:152:24)
+(fail) keeps a matched rollout while tool output scrolls the answer away, and drops it for another process [10087.98ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w4:p1
+      at <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:179:29)
+(fail) reads a thread whose answers are all short by its newest answers on screen, and never rebinds a matched pane by them [11070.56ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w5:p1
+      at <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:238:24)
+(fail) drops a matched rollout once a newer interactive thread begins in its cwd, as /new does, not for a subagent or codex exec [10186.38ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w6:p1
+      at <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:262:24)
+(fail) keeps a matched rollout when the newer thread shows in another Codex pane, whether or not its chat was opened [10086.87ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w7:p1
+      at <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:285:24)
+(fail) finds a pane's thread however many codex exec runs the repo had since [10086.02ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w8:p1
+      at <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:296:24)
+(fail) claims nothing for a pane whose screen matches this pane's thread as well, nor for a closed pane [10190.70ms]
+47 |     const info = await herdrRpc<{ process_info?: { foreground_processes?: { pid: number; argv?: string[] }[] } }>("pane.process_info", { pane_id: paneId });
+48 |     const pids = (info.process_info?.foreground_processes ?? []).filter((process) => process.argv?.some((arg) => arg.endsWith("/codex"))).map((process) => String(process.pid)).join(",");
+49 |     if (pids !== "" && pids !== not) return pids;
+50 |     await Bun.sleep(100);
+51 |   }
+52 |   throw new Error(`no codex process in ${paneId}`);
+                 ^
+error: no codex process in w9:p1
+      at <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:52:13)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:61:9)
+      at async <anonymous> (/tmp/herdr-web-ui-tab-create-baseline/server/codex-binding.contract.test.ts:322:26)
+(fail) takes the thread herdr has for a Codex pane as a hint: the shared daemon reports every TUI's thread to the pane that started it [10424.51ms]
+
+ 0 pass
+ 8 fail
+Ran 8 tests across 1 file. [82.62s]

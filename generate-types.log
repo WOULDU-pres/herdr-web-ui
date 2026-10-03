@@ -1,0 +1,2 @@
+$ bun run scripts/generate-protocol-types.ts --check
+generated types are up to date
