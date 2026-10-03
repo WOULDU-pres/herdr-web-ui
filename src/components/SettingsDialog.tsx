@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Eye, EyeOff, Minus, Plus, Star, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, EyeOff, Minus, Monitor, Plus, Star, X } from "lucide-react";
 
 import "./SettingsDialog.css";
 
@@ -22,7 +22,7 @@ import { DevicesPanel } from "./DevicesPanel.tsx";
 import { PhonePanel } from "./PhonePanel.tsx";
 import { PushTestControls } from "./PushTestControls.tsx";
 import { playAlertSound, unlockAlertSound } from "../lib/alertSound.ts";
-import { UpdateControls } from "./UpdateControls.tsx";
+import { HerdrUpdateControls, UpdateControls } from "./UpdateControls.tsx";
 
 export interface SettingsDialogProps {
   open: boolean;
@@ -101,9 +101,6 @@ function UsageAccounts({ providers }: { providers: readonly ProviderUsage[] }) {
     <div className="usage-accounts">
       <div className="usage-accounts-head">
         <span id="usage-accounts-title">{t("Accounts")}</span>
-        {settings.usageOrder.length > 0 && (
-          <button type="button" className="usage-accounts-reset" onClick={() => update({ usageOrder: [] })}>{t("Nearest limit first")}</button>
-        )}
       </div>
       <ol aria-labelledby="usage-accounts-title">
         {ordered.map((usage, index) => {
@@ -137,13 +134,15 @@ function UsageAccounts({ providers }: { providers: readonly ProviderUsage[] }) {
   );
 }
 
-export function SettingsDialog({ open, onClose, updates, auth, onEnableNotifications }: SettingsDialogProps) {
+export function SettingsDialog({ open, onClose, actions, updates, auth, onEnableNotifications }: SettingsDialogProps) {
   const { settings, update } = useSettings();
   // the accounts to order and hide: the same report the meters show, from the server's cache
   const usage = useUsage(open && settings.showUsage);
   const t = useT();
   const installPrompt = useInstallPrompt();
   const firstControlRef = useRef<HTMLButtonElement>(null);
+  // the Sound switch as last set: the preview waits for the audio, and must not play once it is off
+  const alertSoundWanted = useRef(settings.alertSound);
   // server-side: the web server updates PC bridges, so it keeps this choice
   const [pcSettings, setPcSettings] = useState<MachineSettings | null>(null);
   const [pcSettingsError, setPcSettingsError] = useState<string | null>(null);
@@ -232,11 +231,11 @@ export function SettingsDialog({ open, onClose, updates, auth, onEnableNotificat
               </div>
             </div>
             <div className="settings-row">
-              <div><span className="settings-label">{t("Colors")}</span><span className="settings-description">{t("herdr's amber, a dark report, or neutral charcoal")}</span></div>
+              <div><span className="settings-label">{t("Colors")}</span><span className="settings-description">{t("herdr's amber, a dark report, neutral charcoal, or Catppuccin")}</span></div>
               <div className="segmented" aria-label={t("Colors")}>
-                {(["amber", "report", "charcoal"] as const).map((palette) => (
+                {(["amber", "report", "charcoal", "catppuccin"] as const).map((palette) => (
                   <button key={palette} type="button" aria-pressed={settings.palette === palette} onClick={() => update({ palette })}>
-                    {t(palette === "report" ? "Dark report" : palette === "amber" ? "Amber" : "Charcoal")}
+                    {t(palette === "report" ? "Dark report" : palette === "amber" ? "Amber" : palette === "catppuccin" ? "Catppuccin" : "Charcoal")}
                   </button>
                 ))}
               </div>
@@ -437,8 +436,10 @@ export function SettingsDialog({ open, onClose, updates, auth, onEnableNotificat
               <div><span className="settings-label">{t("Sound")}</span><span className="settings-description">{t("While a tab of the app is open, it chimes for these alerts, also when a Focus or Do Not Disturb silences notifications.")}</span></div>
               <Toggle label={t("Sound")} checked={settings.alertSound} onChange={(alertSound) => {
                 update({ alertSound });
-                // this tap is the gesture the page needs to play audio; the chime is the preview
-                if (alertSound) void unlockAlertSound().then((ready) => { if (ready) playAlertSound("done"); });
+                alertSoundWanted.current = alertSound;
+                // this tap is the gesture the page needs to play audio; the chime is the preview,
+                // unless the switch went off again while the audio was getting ready
+                if (alertSound) void unlockAlertSound().then((ready) => { if (ready && alertSoundWanted.current) playAlertSound("done"); });
               }} />
             </div>
           </section>
@@ -494,11 +495,11 @@ export function SettingsDialog({ open, onClose, updates, auth, onEnableNotificat
             )}
             {settings.showUsage && (
               <div className="settings-row">
-                <span className="settings-label">{t("Where")}</span>
-                <div className="segmented" aria-label={t("Where")}>
-                  {(["footer", "top"] as const).map((usagePlacement) => (
-                    <button key={usagePlacement} type="button" aria-pressed={settings.usagePlacement === usagePlacement} onClick={() => update({ usagePlacement })}>
-                      {t(usagePlacement === "top" ? "Top of the list" : "Beside Settings")}
+                <div><span className="settings-label">{t("Limit shown")}</span><span className="settings-description">{t("The limit each chip shows. Session is the short one, 5 hours on Claude and Codex. A plan without the chosen limit shows the one closest to running out.")}</span></div>
+                <div className="segmented" aria-label={t("Limit shown")}>
+                  {(["week", "session"] as const).map((usageGlance) => (
+                    <button key={usageGlance} type="button" aria-pressed={settings.usageGlance === usageGlance} onClick={() => update({ usageGlance })}>
+                      {t(usageGlance === "week" ? "Weekly" : "Session")}
                     </button>
                   ))}
                 </div>
@@ -545,6 +546,20 @@ export function SettingsDialog({ open, onClose, updates, auth, onEnableNotificat
           </section>
 
           <section className="settings-section">
+            <h3>{t("Remote PCs")}</h3>
+            <div className="settings-row">
+              <div><span className="settings-label">{t("Add PC")}</span><span className="settings-description">{t("Connect another PC over an SSH alias or user@host. Its workspaces join the sidebar.")}</span></div>
+              <button type="button" className="btn" onClick={actions.openAddPc}><Monitor aria-hidden="true" />{t("Add PC")}</button>
+            </div>
+            {/* the switch is the server's and waits for its answer; Add PC never does */}
+            {pcSettings && <div className="settings-row">
+              <div><span className="settings-label">{t("Update PC bridges automatically")}</span><span className="settings-description">{t("When an app update needs a newer bridge, PCs that connect with their saved key are updated in the background. PCs that need a password ask first.")}</span></div>
+              <Toggle label={t("Update PC bridges automatically")} checked={pcSettings.auto_update_bridges} onChange={(auto_update_bridges) => void updatePcSettings({ auto_update_bridges })} />
+            </div>}
+            {pcSettingsError && <p className="settings-hint" role="alert">{pcSettingsError}</p>}
+          </section>
+
+          <section className="settings-section">
             <h3>{t("Install")}</h3>
             {installPrompt.installed ? <p className="settings-hint">{t("Installed")}</p> : installPrompt.canInstall ? (
               <button type="button" className="btn btn-primary" onClick={() => void installPrompt.install()}>{t("Install app")}</button>
@@ -557,16 +572,8 @@ export function SettingsDialog({ open, onClose, updates, auth, onEnableNotificat
             <a className="btn" href="https://github.com/devswha/herdr-web-ui" target="_blank" rel="noreferrer"><Star aria-hidden="true" />{t("Star on GitHub")}</a>
             <a href="https://devswha.github.io/herdr-web-ui/" target="_blank" rel="noreferrer">devswha.github.io/herdr-web-ui</a>
           </section>
-          {pcSettings && <section className="settings-section">
-            <h3>{t("Remote PCs")}</h3>
-            <div className="settings-row">
-              <div><span className="settings-label">{t("Update PC bridges automatically")}</span><span className="settings-description">{t("When an app update needs a newer bridge, PCs that connect with their saved key are updated in the background. PCs that need a password ask first.")}</span></div>
-              <Toggle label={t("Update PC bridges automatically")} checked={pcSettings.auto_update_bridges} onChange={(auto_update_bridges) => void updatePcSettings({ auto_update_bridges })} />
-            </div>
-            {pcSettingsError && <p className="settings-hint" role="alert">{pcSettingsError}</p>}
-          </section>}
-
           <UpdateControls updates={updates} bridgesFollow={pcSettings?.auto_update_bridges === true} />
+          <HerdrUpdateControls enabled={open} />
         </div>
       </section>
     </div>

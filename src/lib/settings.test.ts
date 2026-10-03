@@ -181,6 +181,9 @@ describe("quick replies row", () => {
     expect(DEFAULT_SETTINGS.usageCount).toBe("used");
     expect(sanitizeSettings({ usageCount: "left" }).usageCount).toBe("left");
     expect(sanitizeSettings({ usageCount: "half" }).usageCount).toBe("used");
+    expect(DEFAULT_SETTINGS.usageGlance).toBe("week");
+    expect(sanitizeSettings({ usageGlance: "session" }).usageGlance).toBe("session");
+    expect(sanitizeSettings({ usageGlance: "nearest" }).usageGlance).toBe("week");
     expect(sanitizeSettings({ usageOrder: ["codex:a", 3, "codex:a", "", "claude:b"] }).usageOrder).toEqual(["codex:a", "claude:b"]);
     expect(sanitizeSettings({ usageHidden: Array.from({ length: 100 }, (_, index) => `k${index}`) }).usageHidden).toHaveLength(64);
     expect(sanitizeSettings({ usageHidden: "codex:a" }).usageHidden).toEqual([]);
@@ -194,6 +197,7 @@ describe("palette", () => {
     expect(sanitizeSettings({ theme: "light" }).palette).toBe("amber");
     expect(sanitizeSettings({ palette: "report" }).palette).toBe("report");
     expect(sanitizeSettings({ palette: "charcoal" }).palette).toBe("charcoal");
+    expect(sanitizeSettings({ palette: "catppuccin" }).palette).toBe("catppuccin");
     expect(sanitizeSettings({ palette: "pink" }).palette).toBe("amber");
   });
 
@@ -212,6 +216,8 @@ describe("palette", () => {
     { theme: "light", palette: "report", layers: [paper, '[data-theme="light"]', ":root"] },
     { theme: "dark", palette: "charcoal", layers: ['[data-theme="dark"][data-palette="charcoal"]', ":root"] },
     { theme: "light", palette: "charcoal", layers: ['[data-theme="light"][data-palette="charcoal"]', paper, '[data-theme="light"]', ":root"] },
+    { theme: "dark", palette: "catppuccin", layers: ['[data-theme="dark"][data-palette="catppuccin"]', ":root"] },
+    { theme: "light", palette: "catppuccin", layers: ['[data-theme="light"][data-palette="catppuccin"]', '[data-theme="light"]', ":root"] },
   ] as const;
   const tokens = (layers: readonly string[]) => (name: string): string =>
     layers.map((selector) => block(selector).match(new RegExp(`--${name}: ([^;]+);`))?.[1]).find((value) => value !== undefined)!;
@@ -275,14 +281,6 @@ describe("agent marks", () => {
     const settings = sanitizeSettings({ claudeMark: "mascot", codexMark: "app" });
     expect(settings).not.toHaveProperty("claudeMark");
     expect(settings).not.toHaveProperty("codexMark");
-  });
-});
-
-describe("plan meter placement", () => {
-  it("sits beside Settings until the top of the list is chosen", () => {
-    expect(DEFAULT_SETTINGS.usagePlacement).toBe("footer");
-    expect(sanitizeSettings({ usagePlacement: "top" }).usagePlacement).toBe("top");
-    expect(sanitizeSettings({ usagePlacement: "left" }).usagePlacement).toBe("footer");
   });
 });
 

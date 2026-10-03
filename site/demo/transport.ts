@@ -227,6 +227,8 @@ async function route(url: URL, method: string, init: RequestInit | undefined, in
   if (path === "/api/session") return json({ snapshot: snapshot() });
   if (path === "/api/agents") return json(agentsFixture);
   if (path === "/api/updates") return json({ managed: false, auto_update: false, phase: "idle", current_revision: null, latest_revision: null, current_version: __APP_VERSION__, latest_version: null, available: false, checked_at: null, blocked_reason: null, error: null }, 200, { "cache-control": "no-store" });
+  // the demo has no herdr to update: the controls stay hidden
+  if (path === "/api/herdr/update") return json({ supported: false, phase: "idle", server_version: null, binary_version: null, stale: false, output: null, finished_at: null }, 200, { "cache-control": "no-store" });
   if (path === "/api/access") return json({ port: 7317, tailscale: { state: "running", dns_name: "workstation.example.ts.net", serving_url: "https://workstation.example.ts.net", serve_command: null, serve_url: null } });
   if (path === "/api/usage") return json(usageReport(), 200, { "cache-control": "no-store" });
   if (path === "/api/push" || path.startsWith("/api/push/")) return error("push_unavailable", "the demo sends no alerts", 404);
@@ -276,6 +278,29 @@ async function route(url: URL, method: string, init: RequestInit | undefined, in
     structureChanged();
     return json({ ok: true });
   }
+  if (path === "/api/tab/rename") {
+    const body = await bodyOf(init, input);
+    const tab = snapshot().tabs.find((t) => t.tab_id === body["tab_id"]);
+    if (!tab) return error("tab_not_found", "no such tab", 404);
+    const label = String(body["label"] ?? "").trim();
+    if (label === "") return error("missing_label", "label is required", 400);
+    tab.label = label;
+    structureChanged();
+    return json({ ok: true });
+  }
+  if (path === "/api/tab/close") {
+    const body = await bodyOf(init, input);
+    const snap = snapshot();
+    const tab = snap.tabs.find((t) => t.tab_id === body["tab_id"]);
+    if (!tab) return error("tab_not_found", "no such tab", 404);
+    snap.panes = snap.panes.filter((p) => p.tab_id !== tab.tab_id);
+    snap.tabs = snap.tabs.filter((t) => t.tab_id !== tab.tab_id);
+    snap.layouts = snap.layouts.filter((l) => l.tab_id !== tab.tab_id);
+    // a workspace's last tab takes the workspace with it
+    if (!snap.tabs.some((t) => t.workspace_id === tab.workspace_id)) snap.workspaces = snap.workspaces.filter((w) => w.workspace_id !== tab.workspace_id);
+    structureChanged();
+    return json({ ok: true });
+  }
   if (path === "/api/workspace/rename") {
     const body = await bodyOf(init, input);
     const workspace = snapshot().workspaces.find((w) => w.workspace_id === body["workspace_id"]);
@@ -311,6 +336,31 @@ async function route(url: URL, method: string, init: RequestInit | undefined, in
     snap.panes.push(pane);
     snap.tabs.push({ ...structuredClone(snap.tabs[0]!), tab_id: `${id}:t1`, workspace_id: id, label, number: 1, agent_status: pane.agent_status, focused: false, pane_count: 1 });
     snap.workspaces.push({ ...structuredClone(snap.workspaces[0]!), workspace_id: id, label, number: snap.workspaces.length + 1, active_tab_id: `${id}:t1`, agent_status: pane.agent_status, focused: false, pane_count: 1, tab_count: 1 });
+    if (agent) {
+      keyOfPane.set(pane.pane_id, pane.pane_id);
+      chats.set(pane.pane_id, { turns: [], metadata: { model: agent === "codex" ? "gpt-5.6-sol" : "claude-opus-5-5", reasoning_effort: "medium" } });
+      setTimeout(() => setStatus(pane.pane_id, "idle"), 1500);
+    }
+    structureChanged();
+    return json({ workspace_id: id, pane_id: pane.pane_id, agent_started: agent !== null } satisfies WorkspaceCreated);
+  }
+  if (path === "/api/tab/create") {
+    const body = await bodyOf(init, input);
+    const snap = snapshot();
+    const workspace = snap.workspaces.find((w) => w.workspace_id === body["workspace_id"]);
+    if (!workspace) return error("not_found", "no such workspace", 404);
+    const agent = (body["agent"] as { kind?: string } | null | undefined)?.kind ?? null;
+    const id = workspace.workspace_id;
+    const siblings = snap.panes.filter((p) => p.workspace_id === id);
+    const cwd = String(body["cwd"] ?? siblings[0]?.cwd ?? "/home/demo");
+    const number = snap.tabs.filter((t) => t.workspace_id === id).length + 1;
+    const tabId = `${id}:t${number}`;
+    const template = snap.panes[0]!;
+    const pane: Pane = { ...structuredClone(template), pane_id: `${id}:p${(nextWorkspace++).toString(36)}`, tab_id: tabId, terminal_id: `${id}:term${number}`, workspace_id: id, label: null, title: null, agent, agent_session: null, agent_status: agent ? "working" : "unknown", cwd, foreground_cwd: cwd, focused: false, terminal_title: null, terminal_title_stripped: null, revision: 1 };
+    snap.panes.push(pane);
+    snap.tabs.push({ ...structuredClone(snap.tabs[0]!), tab_id: tabId, workspace_id: id, label: String(body["label"] ?? "") || String(number), number, agent_status: pane.agent_status, focused: false, pane_count: 1 });
+    workspace.tab_count = number;
+    workspace.pane_count = siblings.length + 1;
     if (agent) {
       keyOfPane.set(pane.pane_id, pane.pane_id);
       chats.set(pane.pane_id, { turns: [], metadata: { model: agent === "codex" ? "gpt-5.6-sol" : "claude-opus-5-5", reasoning_effort: "medium" } });
