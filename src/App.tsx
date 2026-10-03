@@ -315,16 +315,14 @@ export function App() {
     playAlertSound(kind);
   }, []);
 
-  // a page plays audio only after a tap or key on it: each one lets the next chime play
+  // a page plays audio only after a tap or key on it: each one lets the next chime play. A mouse
+  // activates the page on press, a touch only on release, so both ends of a tap try
   useEffect(() => {
     if (!settings.alertSound) return;
     const unlock = () => { void unlockAlertSound(); };
-    window.addEventListener("pointerdown", unlock, true);
-    window.addEventListener("keydown", unlock, true);
-    return () => {
-      window.removeEventListener("pointerdown", unlock, true);
-      window.removeEventListener("keydown", unlock, true);
-    };
+    const events = ["pointerdown", "pointerup", "keydown"] as const;
+    for (const event of events) window.addEventListener(event, unlock, true);
+    return () => { for (const event of events) window.removeEventListener(event, unlock, true); };
   }, [settings.alertSound]);
 
   // One SSE subscription watches every PC, even when no terminal is selected.

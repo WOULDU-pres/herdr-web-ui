@@ -6,7 +6,8 @@ const started: number[] = [];
 let resumes = 0;
 const made: FakeAudioContext[] = [];
 class FakeAudioContext {
-  state: "suspended" | "running" | "closed" = "suspended";
+  // "interrupted" is iOS Safari's state after a phone call or a switch away: not in the DOM typings
+  state: "suspended" | "running" | "closed" | "interrupted" = "suspended";
   constructor() { made.push(this); }
   currentTime = 0;
   destination = {};
@@ -64,5 +65,18 @@ describe("alert sound", () => {
     expect(made.length).toBe(2);
     playAlertSound("done");
     expect(started).toEqual([...CHIME_NOTES.done]);
+  });
+
+  it("resumes a context iOS Safari interrupted, on the next gesture", async () => {
+    made.at(-1)!.state = "interrupted";
+    started.length = 0;
+    playAlertSound("blocked");
+    expect(started).toEqual([]);
+    const before = resumes;
+    expect(await unlockAlertSound()).toBe(true);
+    expect(resumes).toBe(before + 1);
+    expect(made.length).toBe(2);
+    playAlertSound("blocked");
+    expect(started).toEqual([...CHIME_NOTES.blocked]);
   });
 });

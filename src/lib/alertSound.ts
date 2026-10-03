@@ -31,7 +31,9 @@ export async function unlockAlertSound(): Promise<boolean> {
   if (!Context) return false;
   // a context the browser closed never resumes: the next gesture makes a new one
   if (!context || context.state === "closed") context = new Context();
-  if (context.state === "suspended") {
+  // suspended before the first gesture, or "interrupted" (iOS Safari, after a call or a switch away):
+  // both resume from a gesture
+  if (context.state !== "running") {
     try {
       await context.resume();
     } catch {
