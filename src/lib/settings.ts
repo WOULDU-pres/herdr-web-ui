@@ -257,7 +257,7 @@ const TERMINAL_THEMES: Record<Palette, Record<ResolvedTheme, TerminalColors>> = 
     dark: { background: "#1e1e2e", foreground: "#cdd6f4", cursor: "#f5e0dc", selectionBackground: "#3b3d4f" },
   },
   lilac: {
-    light: { background: "#f2f0fc", foreground: "#2b2d4d", cursor: "#4a42c2", selectionBackground: "#d5cff5" },
+    light: { background: "#f8f7fe", foreground: "#2b2d4d", cursor: "#4a42c2", selectionBackground: "#dcd7f8" },
     dark: { background: "#18172f", foreground: "#dcdaf4", cursor: "#b3abff", selectionBackground: "#3a3768" },
   },
 };
@@ -272,7 +272,7 @@ const THEME_COLOR: Record<Palette, Record<ResolvedTheme, string>> = {
   report: { dark: "#0f1319", light: "#fafaf9" },
   charcoal: { dark: "#171717", light: "#fafaf9" },
   catppuccin: { dark: "#181825", light: "#e6e9ef" },
-  lilac: { dark: "#1c1b34", light: "#f0eefb" },
+  lilac: { dark: "#1c1b34", light: "#f6f5fe" },
 };
 
 function applyToDocument(settings: Settings, resolved: ResolvedTheme, language: Language): void {

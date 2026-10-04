@@ -90,11 +90,11 @@ tables above are amber, the base blocks; the four opt-in palettes override them 
   until it passes AA: Mauve `#712fc6` (primary hover is plain Latte Mauve `#8839ef`), Blue `#1750bf`,
   Red `#ac0c2f`, Green `#28651b`. It keeps amber's rounded corners.
 - **Lilac** is one quiet lavender, flat on every surface (no gradient, no translucency). Light is
-  the look it was drawn for: a lavender canvas `--bg` `#e8e5f8` under paler chrome `--bg-panel`
-  `#f0eefb` (elevated `#f6f5fd`, hover `#dedaf4`, input `#fbfaff`), indigo ink (text `#2b2d4d` /
+  the look it was drawn for: a pale lavender canvas `--bg` `#f0eefc` under paler chrome `--bg-panel`
+  `#f6f5fe` (elevated `#fbfaff`, hover `#e8e5f8`, input `#fdfcff`), indigo ink (text `#2b2d4d` /
   `#545779` / `#17193a`), and an indigo accent and primary `#4a42c2` with white text. States are
   darkened until their badges pass AA on a hovered row: working `#1f4aa6`, input `#9c2044`, done
-  `#1f5c39`, idle `#545779`. Terminal `#f2f0fc`, cursor `#4a42c2`, selection `#d5cff5`. Dark is the
+  `#1f5c39`, idle `#545779`. Terminal `#f8f7fe`, cursor `#4a42c2`, selection `#dcd7f8`. Dark is the
   same hue at night: canvas `#16152b`, chrome `#1c1b34` (elevated `#23223f`, hover `#2c2a4f`), text
   `#dcdaf4` / `#a5a2cc` / `#f2f1ff`, a pale lilac accent and primary `#b3abff` with `#17163a` text,
   states working `#85b8ff`, input `#ff94ad`, done `#92d9ab`, terminal `#18172f`, selection
