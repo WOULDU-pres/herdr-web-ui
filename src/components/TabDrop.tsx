@@ -55,6 +55,14 @@ export function TabDrop({ strip }: { strip: RefObject<HTMLDivElement> }) {
       target = null;
       motion.vanish();
     };
+    // the pointer went: the drop goes back to a tab the keyboard focus is showing on, and goes only
+    // when that left too
+    const rest = (): void => {
+      const active = document.activeElement;
+      const focused = active instanceof HTMLElement && active.matches(":focus-visible") ? itemOf(active) : null;
+      if (focused) show(focused);
+      else vanish();
+    };
     const onOver = (event: PointerEvent): void => {
       if (event.pointerType === "touch") return;
       const item = itemOf(event.target);
@@ -80,14 +88,14 @@ export function TabDrop({ strip }: { strip: RefObject<HTMLDivElement> }) {
     };
 
     row.addEventListener("pointerover", onOver);
-    row.addEventListener("pointerleave", vanish);
+    row.addEventListener("pointerleave", rest);
     row.addEventListener("focusin", onFocusIn);
     row.addEventListener("focusout", onFocusOut);
     row.addEventListener("scroll", onLayout, { passive: true });
     window.addEventListener("resize", onLayout);
     return () => {
       row.removeEventListener("pointerover", onOver);
-      row.removeEventListener("pointerleave", vanish);
+      row.removeEventListener("pointerleave", rest);
       row.removeEventListener("focusin", onFocusIn);
       row.removeEventListener("focusout", onFocusOut);
       row.removeEventListener("scroll", onLayout);

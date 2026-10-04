@@ -62,6 +62,8 @@ export function createDropMotion(liquid: HTMLElement, { radius, maxBead = Infini
   const beads = new Map<HTMLElement, Point>();
   let origin: Point = { x: 0, y: 0 };
   let covered: Area = { left: 0, top: 0, right: 0, bottom: 0 };
+  // the box the drop rests on, or runs to, in the host's space
+  let resting: DropBox | null = null;
   let shown = false;
   let move: Animation | null = null;
   let wobble: Animation | null = null;
@@ -95,6 +97,7 @@ export function createDropMotion(liquid: HTMLElement, { radius, maxBead = Infini
     });
   };
   const inside = (box: DropBox): boolean => box.left >= covered.left && box.top >= covered.top && box.left + box.width <= covered.right && box.top + box.height <= covered.bottom;
+  const same = (a: DropBox, b: DropBox): boolean => Math.abs(a.left - b.left) < 0.5 && Math.abs(a.top - b.top) < 0.5 && Math.abs(a.width - b.width) < 0.5 && Math.abs(a.height - b.height) < 0.5;
 
   // cover these boxes and their room, as far as they are on screen; what is in the liquid moves back
   // by as much as the liquid moves. The drop's own run is restarted by the caller.
@@ -177,6 +180,7 @@ export function createDropMotion(liquid: HTMLElement, { radius, maxBead = Infini
     stop();
     cover([box, ...beadBoxes()]);
     set(local(box));
+    resting = box;
     drop.classList.add("is-on");
     shown = true;
     if (reduced.matches) return;
@@ -198,6 +202,7 @@ export function createDropMotion(liquid: HTMLElement, { radius, maxBead = Infini
     const from = { ...local(start), scale: here.scale };
     const to = local(box);
     set(to);
+    resting = box;
     if (reduced.matches) return;
     const stretched = stretchBox(from, to);
     const duration = ms("--dur-water");
@@ -221,10 +226,14 @@ export function createDropMotion(liquid: HTMLElement, { radius, maxBead = Infini
 
   return {
     show: (box) => { if (shown) travel(box); else appear(box); },
+    // a re-render that leaves the box where it was changes nothing, so a run in flight goes on; a
+    // box that moved ends the run there, instead of letting it finish on the old box and jump
     retarget: (box) => {
-      if (!shown) return;
-      if (!inside(box)) { stop(); cover([box, ...beadBoxes()]); }
+      if (!shown || (resting && same(resting, box))) return;
+      stop();
+      if (!inside(box)) cover([box, ...beadBoxes()]);
       set(local(box));
+      resting = box;
     },
     place: (box) => {
       popBeads();
@@ -232,6 +241,7 @@ export function createDropMotion(liquid: HTMLElement, { radius, maxBead = Infini
       stop();
       cover([box]);
       set(local(box));
+      resting = box;
     },
     vanish: () => {
       popBeads();
@@ -240,6 +250,7 @@ export function createDropMotion(liquid: HTMLElement, { radius, maxBead = Infini
       stop();
       set(here);
       shown = false;
+      resting = null;
       drop.classList.remove("is-on");
       if (reduced.matches) return;
       fade = drop.animate([{ scale: here.scale, opacity: 1 }, { scale: "0.2", opacity: 1 }], { duration: ms("--dur-base") * 1.4, easing: "cubic-bezier(0.5, 0, 0.9, 0.5)" });

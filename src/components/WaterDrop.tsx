@@ -114,6 +114,15 @@ export function WaterDrop({ items, follow = "pointer", marked = '[aria-selected=
       target = null;
       motion.vanish();
     };
+    // the pointer went: the drop goes back to an item the keyboard focus is showing on (its fill is
+    // dropped while water drops are on, so the drop is its highlight), and goes only when that left too
+    const rest = (): void => {
+      window.clearTimeout(leave);
+      const active = document.activeElement;
+      const focused = active instanceof HTMLElement && active.matches(":focus-visible") ? itemOf(active) : null;
+      if (focused) show(focused);
+      else vanish();
+    };
     // the window resized: the item may have moved in the layer's space
     const onLayout = (): void => {
       if (motion.shown && target) motion.retarget(boxOf(target));
@@ -150,7 +159,7 @@ export function WaterDrop({ items, follow = "pointer", marked = '[aria-selected=
       window.clearTimeout(leave);
       const item = itemOf(event.target);
       if (item) show(item);
-      else leave = window.setTimeout(vanish, LEAVE_GRACE_MS);
+      else leave = window.setTimeout(rest, LEAVE_GRACE_MS);
     };
     const onFocusIn = (event: FocusEvent): void => {
       const item = itemOf(event.target);
@@ -162,7 +171,7 @@ export function WaterDrop({ items, follow = "pointer", marked = '[aria-selected=
     };
     if (follow === "pointer") {
       group.addEventListener("pointerover", onOver);
-      group.addEventListener("pointerleave", vanish);
+      group.addEventListener("pointerleave", rest);
       group.addEventListener("focusin", onFocusIn);
       group.addEventListener("focusout", onFocusOut);
     } else {
@@ -174,7 +183,7 @@ export function WaterDrop({ items, follow = "pointer", marked = '[aria-selected=
       window.clearTimeout(leave);
       observer?.disconnect();
       group.removeEventListener("pointerover", onOver);
-      group.removeEventListener("pointerleave", vanish);
+      group.removeEventListener("pointerleave", rest);
       group.removeEventListener("focusin", onFocusIn);
       group.removeEventListener("focusout", onFocusOut);
       group.removeEventListener("pointerover", onPoint);
