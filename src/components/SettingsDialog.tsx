@@ -271,6 +271,10 @@ export function SettingsDialog({ open, onClose, actions, updates, auth, onEnable
               </div>
             </div>
             <div className="settings-row">
+              <div><span className="settings-label">{t("Show all tabs in sidebar")}</span><span className="settings-description">{t("List tabs below each workspace for quick switching")}</span></div>
+              <Toggle label={t("Show all tabs in sidebar")} checked={settings.showSidebarTabs} onChange={(showSidebarTabs) => update({ showSidebarTabs })} />
+            </div>
+            <div className="settings-row">
               <div><span className="settings-label">{t("Terminal font size")}</span><span className="settings-description">{t("Applied to every terminal pane")}</span></div>
               <div className="settings-stepper" aria-label={t("Terminal font size")}>
                 <button type="button" className="icon-button" aria-label={t("Decrease terminal font size")} disabled={settings.terminalFontSize <= TERMINAL_FONT_MIN} onClick={() => update({ terminalFontSize: settings.terminalFontSize - 1 })}><Minus /></button>

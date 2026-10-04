@@ -319,13 +319,19 @@ One set for both themes: the card is island black wherever it shows.
   and the PC groups. A workspace starts from the `+` on its PC's header, or from the **New workspace**
   button in the dashed **No workspaces yet** box of an empty PC. **Add PC** lives in Settings →
   Remote PCs and in the command palette. Search lives in the command palette, not the roster.
-- One row per workspace, as herdr's Spaces sidebar: no workspace headers, numbers or folds. The
+- By default, one row per workspace, as herdr's Spaces sidebar: no workspace headers, numbers or folds. The
   row stands for the workspace through its *current pane*: the selected pane when it is in the
   workspace, else the pane last viewed there, else the one herdr has in front. Its mark, title
   and folder are that pane's; its state word is the roll-up of every pane in the workspace
   (blocked, then working, then done, then ready), as herdr rolls a workspace up. The other panes
   of a workspace are reached from the tab strip over the pane, the command palette and
   **Needs you**.
+- Appearance's **Show all tabs in sidebar** is off by default. When enabled, workspaces with
+  several tabs gain an indented list below their row, in herdr's tab order. Each button shows the
+  tab's name, its current pane's title and the roll-up of its panes' states. The selected tab has
+  an accent tint and `aria-current`; clicking opens the last viewed pane in that tab, then its
+  focused pane, then its first. Folder grouping lists only tabs with panes in that folder and
+  opens a pane there. The choice applies immediately and persists in Settings.
 - Appearance's **Sidebar grouping** is **By workspace** by default. **By folder** opts into the
   grouping below. The choice applies immediately and persists in the browser's existing Settings
   record; folder folds are remembered per PC and path.

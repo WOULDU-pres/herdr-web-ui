@@ -17,6 +17,7 @@ import { folderName, placeLine, shortPathTitle } from "../lib/paneName.ts";
 import { useT } from "../lib/i18n.ts";
 import { groupDirectories } from "../lib/directoryGroups.ts";
 import { useSettings, type SidebarGrouping } from "../lib/settings.ts";
+import { tabLabel } from "../lib/tabName.ts";
 
 const ERROR_NOTE_MS = 5000;
 
@@ -105,7 +106,8 @@ export interface SidebarProps {
  * One row per workspace, as herdr's Spaces sidebar: the row shows the workspace's current pane
  * (the selected one when it is in the workspace, else the one last viewed there, else the one
  * herdr has in front) and opens it. The panes of a workspace are picked from the tab strip
- * over the pane, the palette and Needs you; the row's state is the roll-up of all of them.
+ * over the pane, the palette and Needs you, or the optional sidebar tab list; the row's state
+ * is the roll-up of all of them.
  */
 export function Sidebar({ snapshot, selectedPaneId, actions }: SidebarProps) {
   const t = useT();
@@ -127,10 +129,14 @@ export function Sidebar({ snapshot, selectedPaneId, actions }: SidebarProps) {
   const unfoldedFor = useRef<Partial<Record<SidebarGrouping, string>>>({});
   // the pane each workspace was last seen on: its row keeps showing and opening that one
   const lastViewed = useRef(new Map<string, string>());
+  const lastViewedTab = useRef(new Map<string, string>());
 
   useEffect(() => {
     const pane = selectedPaneId ? snapshot?.panes.find((pane) => pane.pane_id === selectedPaneId) : undefined;
-    if (pane) lastViewed.current.set(pane.workspace_id, pane.pane_id);
+    if (pane) {
+      lastViewed.current.set(pane.workspace_id, pane.pane_id);
+      lastViewedTab.current.set(pane.tab_id, pane.pane_id);
+    }
   }, [selectedPaneId, snapshot]);
 
   const setGroupCollapsed = (groupKey: string, collapsed: boolean): void => {
@@ -206,11 +212,11 @@ export function Sidebar({ snapshot, selectedPaneId, actions }: SidebarProps) {
   const noteError = (message: string, workspaceId?: string): void => setInlineError({ message, workspaceId });
 
   /** the pane a workspace's row shows and opens, among the panes the row stands for */
-  const currentPane = (workspace: WorkspaceInfo, panes: PaneInfo[]): PaneInfo => {
+  const currentPane = (workspace: WorkspaceInfo, panes: PaneInfo[], tabId?: string): PaneInfo => {
     const pick = (id: string | null | undefined) => (id ? panes.find((pane) => pane.pane_id === id) : undefined);
     return pick(selectedPaneId)
-      ?? pick(lastViewed.current.get(workspace.workspace_id))
-      ?? pick(snapshot?.layouts?.find((layout) => layout.tab_id === workspace.active_tab_id)?.focused_pane_id)
+      ?? pick(tabId ? lastViewedTab.current.get(tabId) : lastViewed.current.get(workspace.workspace_id))
+      ?? pick(snapshot?.layouts?.find((layout) => layout.tab_id === (tabId ?? workspace.active_tab_id))?.focused_pane_id)
       ?? panes.find((pane) => pane.focused)
       ?? panes[0]!;
   };
@@ -400,6 +406,9 @@ export function Sidebar({ snapshot, selectedPaneId, actions }: SidebarProps) {
     const editingPane = editingPaneId === pane.pane_id;
     const editingWorkspace = editingWorkspaceId === `${scope}\u0000${workspace.workspace_id}`;
     const menuOpen = menu?.workspace.workspace_id === workspace.workspace_id && menu.scope === scope;
+    const tabs = settings.showSidebarTabs
+      ? snapshot?.tabs.filter((tab) => tab.workspace_id === workspace.workspace_id).sort((a, b) => a.number - b.number) ?? []
+      : [];
     return (
       <li
         className={`workspace pane-item${dragWorkspaceId === workspace.workspace_id ? " is-dragging" : ""}${selected ? " is-selected" : ""}`}
@@ -490,6 +499,28 @@ export function Sidebar({ snapshot, selectedPaneId, actions }: SidebarProps) {
             </button>
           </div>
         </div>
+        {tabs.length > 1 && <ul className="sidebar-tabs" aria-label={t("Tabs in {name}", { name: workspace.label })}>
+          {tabs.map((tab, index) => {
+            // Folder grouping only offers panes inside this folder, even for a split tab.
+            const own = visiblePanes.filter((candidate) => candidate.tab_id === tab.tab_id);
+            if (own.length === 0) return null;
+            const target = currentPane(workspace, own, tab.tab_id);
+            const name = tabLabel(tab, t, index + 1);
+            return <li key={tab.tab_id}>
+              <button
+                type="button"
+                className="sidebar-tab"
+                data-tab-id={tab.tab_id}
+                aria-current={own.some((candidate) => candidate.pane_id === selectedPaneId) ? "true" : undefined}
+                title={`${name} — ${paneTitle(target)}${target.cwd ? ` — ${target.cwd}` : ""}`}
+                onClick={() => actions.selectPane(target.pane_id)}
+              >
+                <span className="sidebar-tab-copy"><span className="sidebar-tab-name">{name}</span><span className="sidebar-tab-pane">{displayPaneTitle(target)}</span></span>
+                <StatusBadge status={rollupStatus(own.map((candidate) => candidate.agent_status))} />
+              </button>
+            </li>;
+          })}
+        </ul>}
         {inlineError?.workspaceId === workspace.workspace_id && <p className="sidebar-inline-error" role="alert">{inlineError.message}</p>}
       </li>
     );
