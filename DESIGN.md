@@ -210,6 +210,8 @@ Comfortable values are `:root`; the final column is the complete compact overrid
 | `--ring` | `2px solid var(--accent)` | Global `:focus-visible` outline |
 | `--ring-offset` | `2px` | Outline offset |
 | `--z-banner` | `5` | Terminal banners |
+| `--z-tab-drop` | `6` | Tab drop layer, over the header, the chat and the terminal banners |
+| `--z-tab-row` | `7` | Tabs and the `+`, over the tab drop |
 | `--z-popover` | `10` | Composer completions |
 | `--z-scrim` | `15` | Mobile drawer scrim |
 | `--z-drawer` | `20` | Mobile drawer |
@@ -230,6 +232,20 @@ One set for both themes: the card is island black wherever it shows.
 | `--droplet-mark-bg` | `rgba(255, 255, 255, 0.1)` | Agent mark disc |
 | `--droplet-ring` | `rgba(255, 255, 255, 0.1)` | Card hairline |
 | `--droplet-shadow` | `rgba(0, 0, 0, 0.35)` | Drop shadow under the liquid |
+
+### Tab drop
+
+The water drop under the pointer on the tab row (`TabDrop.tsx`); its SVG filter paints these on
+the liquid's shape. They are mixed from the palette's own colours, so the opt-in palettes need no
+values of their own.
+
+| Token | Dark | Light | Usage |
+|-------|------|-------|-------|
+| `--tab-drop-body` | `color-mix(in srgb, var(--text-strong) 10%, transparent)` | `color-mix(in srgb, var(--text-strong) 5%, transparent)` | The water's body |
+| `--tab-drop-edge` | `color-mix(in srgb, var(--text-strong) 12%, transparent)` | `color-mix(in srgb, var(--text-strong) 20%, transparent)` | 1px edge |
+| `--tab-drop-rim` | `color-mix(in srgb, var(--text-strong) 30%, transparent)` | `var(--bg-input)` | Bright crescent along the bottom |
+| `--tab-drop-light` | `var(--text-strong)` | `var(--bg-input)` | Light on the curved surface |
+| `--tab-drop-shade` | `color-mix(in srgb, var(--bg) 75%, transparent)` | `color-mix(in srgb, var(--text-strong) 18%, transparent)` | Shadow under the water |
 
 ### Shell
 - `.app` is a full-viewport column: `.app-header` over `.app-body`; the body is sidebar plus
@@ -416,6 +432,17 @@ One set for both themes: the card is island black wherever it shows.
 - The underline runs under the whole tab (`.tab-strip-item.is-active`), its `x` included. A tab
   herdr names itself reads **Tab n** by its place in the row: herdr relabels it when a tab
   before it closes.
+- A water drop sits under the tab the pointer or the keyboard focus is on (`TabDrop.tsx`): 1.25
+  times the tab, centred on it, spilling past the row onto the header and the pane, in a layer
+  (`--z-tab-drop`) under the tabs and the `+` (`--z-tab-row`), so the names stay on top. It stays
+  inside the row's ends and short of the `+`. It wells up on the first tab; to the next one its
+  leading edge runs ahead and the drop thins, then the tail snaps after it and draws out a thread
+  of 4-5 beads that breaks into pearls: the front one runs back into the drop, the rest fall away
+  and shrink to nothing. When the pointer leaves the row the drop and any beads shrink away. A
+  tab being renamed gets none, and neither does a touch. The drop and the beads are plain shapes;
+  an SVG filter blurs them together and cuts the blur back to a hard edge (so a bead pulling away
+  draws a neck that thins and snaps), then paints the `--tab-drop-*` colours: body, edge, a
+  bright crescent along the bottom, light from the upper left and a shadow.
 - `--control-h` tall on a hairline over `--bg-panel`, scrolling sideways without a scrollbar;
   touch grows the buttons to `--touch-target`, and puts the pane picker beside its tab's name
   instead of pulling it over the name's padding. The same strip on a phone.
@@ -570,6 +597,7 @@ One set for both themes: the card is island black wherever it shows.
 | Micro | `--dur-fast` | `120ms` | Hover, active, toggle and control state |
 | Standard | `--dur-base` | `180ms` | Drawer slide; reserved dialog timing token |
 | Pulse | `--dur-pulse` | `1600ms` | Working and reconnecting dots (trough opacity 0.35; text never pulses) |
+| Tab drop | `--dur-tab-drop` | `520ms` | The tab drop's run to the next tab and its welling up; its thread's beads live 1.55-1.7 times it |
 | Easing | `--ease-out` | `cubic-bezier(0.2, 0, 0, 1)` | Finite transitions |
 | Pulse easing | `--ease-pulse` | `steps(2, jump-none)` | Endless working and reconnecting dots; avoids drawing every display refresh |
 | Spring easing | `--ease-spring` | `cubic-bezier(0.32, 0.72, 0, 1)` | Voice recording pill enter (180ms, scale 0.96->1 + opacity, from the mic button) and exit (120ms) |
@@ -581,8 +609,12 @@ One set for both themes: the card is island black wherever it shows.
 - The voice recording waveform is the one surface allowed to draw every frame: only while
   recording, driven by the live microphone level, transform-only (`scaleY` on 7 bars). The pill is
   a state change, not a dialog, so the snap rule above does not apply to it.
+- The tab drop moves only while the pointer or the keyboard focus moves along the tab row, and
+  draws every frame only while it runs (one `--dur-tab-drop`, its beads under twice that). Its
+  liquid filter covers the row and a margin around it, not the window.
 - `prefers-reduced-motion: reduce` removes pulses, drawer/control transitions, smooth chat scrolling
-  and settings toggle motion. State remains legible without animation.
+  and settings toggle motion. State remains legible without animation. The tab drop then jumps
+  from tab to tab and draws out no beads.
 - Under reduced motion the voice pill swaps its bars for one level bar updated at 4 Hz and drops
   the ring and the morph; the **Recording** label and the timer stay.
 

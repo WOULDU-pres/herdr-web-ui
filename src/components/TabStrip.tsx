@@ -10,6 +10,8 @@
  * new one, a right-click for the menu. On a touch screen the open tab's chevron opens the same
  * menu as a sheet. With keys: F2 and Delete on a focused tab. A close asks first only when it
  * costs more than the tab: an agent still at work in it, or the workspace's last tab.
+ *
+ * A glass drop follows the pointer and the keyboard focus from tab to tab (TabDrop.tsx).
  */
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { ChevronDown, Pencil, Plus, Terminal, X } from "lucide-react";
@@ -27,6 +29,7 @@ import { AgentMark } from "./AgentMark.tsx";
 import { ConfirmDialog } from "./ConfirmDialog.tsx";
 import { displayPaneTitle } from "./Sidebar.tsx";
 import { RowMenu, type RowMenuItem } from "./RowMenu.tsx";
+import { TabDrop } from "./TabDrop.tsx";
 
 const said = (reason: unknown): string => reason instanceof ApiError ? reason.detail : reason instanceof Error ? reason.message : String(reason);
 
@@ -295,6 +298,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
         </button>
         {error && <span className="tab-strip-error" role="alert">{error}</span>}
       </div>
+      <TabDrop strip={strip} />
       {picker && <RowMenu anchor={picker.anchor} title={panesOf(picker.tab).length > 1 ? t("Panes in {tab}", { tab: nameOf(picker.tab) }) : nameOf(picker.tab)} items={pickerItems(picker.tab)} align="start" onClose={() => setPicker(null)} />}
       {confirm && <ConfirmDialog title={confirm.title} body={confirm.body} confirmLabel={t("Close tab")} onConfirm={async () => { await close(confirm.tab); setConfirm(null); }} onClose={() => setConfirm(null)} />}
     </>

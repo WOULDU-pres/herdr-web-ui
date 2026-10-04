@@ -17,7 +17,10 @@
   display: none;
 }
 
+/* the tabs ride over the water drop's layer (TabDrop.css); the row's own colour stays under it */
 .tab-strip-item {
+  position: relative;
+  z-index: var(--z-tab-row);
   display: flex;
   align-items: stretch;
   flex: 0 0 auto;
@@ -147,6 +150,8 @@
 .tab-strip-add {
   position: sticky;
   right: 0;
+  /* over the tabs that scroll under it: same layer, later in the row */
+  z-index: var(--z-tab-row);
   background: var(--bg-panel);
   /* the strip's own end padding, in the panel's colour: no tab shows past the + */
   box-shadow: var(--space-3) 0 0 var(--bg-panel);

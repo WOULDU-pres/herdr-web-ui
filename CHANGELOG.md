@@ -7,6 +7,12 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 
 ## [Unreleased]
 
+### Added
+- A water drop follows the pointer along the tab row. It is a little bigger than the tab and
+  spills onto the header and the pane under the tab names; on its way to the next tab it
+  stretches, and its tail draws out a thread that breaks into drops, which fall away. Keyboard
+  focus shows it too. Touch screens get none, and with reduced motion it moves without animating.
+
 ### Fixed
 - Switching to another pane no longer shows the previous pane's chat for a moment before the
   new one loads.
