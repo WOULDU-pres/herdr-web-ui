@@ -328,8 +328,9 @@ One set for both themes: the card is island black wherever it shows.
   **Needs you**.
 - Appearance's **Show all tabs in sidebar** is off by default. When enabled, workspaces with
   several tabs gain an indented list below their row, in herdr's tab order. Each button shows the
-  tab's name, its current pane's title and the roll-up of its panes' states. The selected tab has
-  an accent tint and `aria-current`; clicking opens the last viewed pane in that tab, then its
+  current pane's agent mark (or shell icon) at `--icon-size`, the tab's name, its current pane's
+  title and the roll-up of its panes' states. The selected tab has an accent tint and
+  `aria-current`; clicking opens the last viewed pane in that tab, then its
   focused pane, then its first. Folder grouping lists only tabs with panes in that folder and
   opens a pane there. The choice applies immediately and persists in Settings.
 - Appearance's **Sidebar grouping** is **By workspace** by default. **By folder** opts into the

@@ -515,6 +515,9 @@ export function Sidebar({ snapshot, selectedPaneId, actions }: SidebarProps) {
                 title={`${name} — ${paneTitle(target)}${target.cwd ? ` — ${target.cwd}` : ""}`}
                 onClick={() => actions.selectPane(target.pane_id)}
               >
+                <span className="sidebar-tab-mark" title={target.agent ?? t("Shell")}>
+                  {target.agent ? <AgentMark agent={target.agent} size={18} /> : <Terminal aria-hidden="true" />}
+                </span>
                 <span className="sidebar-tab-copy"><span className="sidebar-tab-name">{name}</span><span className="sidebar-tab-pane">{displayPaneTitle(target)}</span></span>
                 <StatusBadge status={rollupStatus(own.map((candidate) => candidate.agent_status))} />
               </button>

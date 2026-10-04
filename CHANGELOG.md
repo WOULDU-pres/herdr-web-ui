@@ -8,8 +8,9 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 ## [Unreleased]
 
 ### Added
-- **Settings → Appearance → Show all tabs in sidebar** lists each workspace's tabs with their
-  statuses for quick switching. Off by default; works with workspace and folder grouping.
+- **Settings → Appearance → Show all tabs in sidebar** lists each workspace's tabs with small
+  agent icons and statuses for quick switching. Off by default; works with workspace and folder
+  grouping.
 
 ### Fixed
 - Switching to another pane no longer shows the previous pane's chat for a moment before the
