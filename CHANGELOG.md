@@ -19,6 +19,9 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
   carries an earlier Codex session report. It used to follow that report, ask the wrong agent
   and fail to load.
   ([#423](https://github.com/devswha/herdr-web-ui/pull/423) by @Kinetic27)
+- The alert sound chimes once for alerts that come together, from several panes at once or in
+  more than one open tab of the app, instead of sounding over itself. A pane that needs input
+  right after one that finished still chimes, once the first chime ends.
 
 ## [0.3.49] - 2026-10-04
 
