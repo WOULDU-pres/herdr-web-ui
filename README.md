@@ -30,9 +30,9 @@ https://github.com/user-attachments/assets/6162cf5a-b29b-4f14-b2a2-7a01564791d6
 
 <p align="center"><sub>Claude Code in a terminal pane, the same session as a chat, then on the phone · recorded live · <a href="https://devswha.github.io/herdr-web-ui/media/herdr-web-ui-film.mp4">▶ the 56-second film</a></sub></p>
 
-**Your agents, in plain conversation. On your desktop and your phone.**
+**Claude Code and Codex, from your phone.**
 
-A browser and phone client for [herdr](https://github.com/herdrdev/herdr). Open the sessions you already run, read what your agents are doing, and answer them from wherever you are.
+A browser and phone client for [herdr](https://github.com/herdrdev/herdr). Read and reply to the same agent sessions running on your computer — on desktop or phone, as chat, with the terminal when you need it.
 
 <table>
   <tr>
@@ -56,7 +56,7 @@ A browser and phone client for [herdr](https://github.com/herdrdev/herdr). Open 
     <td width="50%" valign="top">
       <a href="https://github.com/user-attachments/assets/3a8e40f3-7988-4a28-8729-9f8b9ad64610"><img src="docs/media/readme/ssh.webp" width="100%" alt="Add PC connects to a Linux PC over SSH, installs the bridge, and its session joins the sidebar with a terminal running on that PC."></a>
       <br><b>Every PC in one sidebar</b>
-      <br><sub>Add Linux and macOS machines over SSH. <a href="docs/remote-pcs.md">Remote PCs →</a></sub>
+      <br><sub>Add Linux, macOS and Windows machines over SSH. <a href="docs/remote-pcs.md">Remote PCs →</a></sub>
     </td>
   </tr>
 </table>
@@ -98,7 +98,7 @@ Already have the prerequisites? Install just the plugin:
 herdr plugin install devswha/herdr-web-ui
 ```
 
-With herdr running, open **[localhost:7317](http://localhost:7317)**. Pick a pane or start an agent with **New session**. To use your phone, scan the installer's QR code and add the app to your home screen. [Quick start →](docs/guide.md#quick-start)
+With herdr running, open **[localhost:7317](http://localhost:7317)**. Pick a pane or start an agent with **New workspace**. To use your phone, scan the installer's QR code and add the app to your home screen. [Quick start →](docs/guide.md#quick-start)
 
 The server listens on `127.0.0.1` by default. For access from another device, see [phone setup](docs/guide.md#on-your-phone) and [access and safety](docs/guide.md#access-and-safety).
 
@@ -116,7 +116,7 @@ Thanks to everyone who has contributed, including [@Yoonwoo-Ha](https://github.c
 
 ## agent instructions
 
-Helping someone install the app? Follow [INSTALL.md](INSTALL.md). For repository changes, follow [CONTRIBUTING.md](CONTRIBUTING.md) and the committed [review rules](.github/REVIEW.md), plus the local `AGENTS.md` instructions when present.
+Helping someone install the app? Follow [INSTALL.md](INSTALL.md). For repository changes, follow [CONTRIBUTING.md](CONTRIBUTING.md), the [review rules](.github/REVIEW.md) and [AGENTS.md](AGENTS.md).
 
 ## development
 

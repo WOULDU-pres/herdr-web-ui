@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, FolderOpen, Lock, Menu, MessageSquare, PanelLeft, Search, SquareTerminal, X } from "lucide-react";
+import { Bell, FolderOpen, Lock, Menu, MessageSquare, PanelLeft, Plus, Search, SquareTerminal, X } from "lucide-react";
 
 import type { AgentStatus, ClientRole, ServerMessage, AccessRefusal, HealthAuth, HerdrPane } from "../shared/protocol.ts";
 import { ApiError, authenticate, fetchHealth, fetchBridgeHealth, fetchMachines, fetchSession, pairDevice, sendTestPush, signOut, type HealthInfo } from "./lib/api.ts";
@@ -8,12 +8,14 @@ import { displayPaneTitle } from "./components/Sidebar.tsx";
 import { PaneTerminal } from "./components/PaneTerminal.tsx";
 import { AccessGate } from "./components/AccessGate.tsx";
 import { AgentMark } from "./components/AgentMark.tsx";
-import { NewSessionDialog } from "./components/NewSessionDialog.tsx";
+import { NewSessionDialog, type NewTabTarget } from "./components/NewSessionDialog.tsx";
+import { TabStrip } from "./components/TabStrip.tsx";
 import { SettingsDialog } from "./components/SettingsDialog.tsx";
 import { CommandPalette } from "./components/CommandPalette.tsx";
 import { MachineContext } from "./lib/machineContext.tsx";
 import { MachineActionBanner, MachineSidebar } from "./components/MachineSidebar.tsx";
 import { MachineDialog } from "./components/MachineDialog.tsx";
+import { focusWorkspaceListToggle } from "./lib/focus.ts";
 import { paneStorageId, type Machine, type MachineEvent } from "../shared/machines.ts";
 import { takeAuthTokenFromUrl } from "./lib/authLink.ts";
 import { applyPaneStatus } from "./lib/snapshot.ts";
@@ -43,6 +45,7 @@ import { useScreenWakeLock } from "./lib/wakeLock.ts";
 import { watchDrawerSwipe } from "./lib/edgeSwipe.ts";
 import { Droplet } from "./components/Droplet.tsx";
 import { dropletAllows, endedTurn, showDroplet, trackTurn, type DropletKind } from "./lib/droplet.ts";
+import { playAlertSound, unlockAlertSound, type AlertSoundKind } from "./lib/alertSound.ts";
 
 const APP_TITLE = "herdr web ui";
 const POLL_MS = 5000;
@@ -129,7 +132,7 @@ export function App() {
   const alerts = useMemo(() => alertPrefs(settings), [settings.alertInput, settings.alertDone]);
   const alertsRef = useRef(alerts);
   alertsRef.current = alerts;
-  // the bell's switch for this device: off drops its push subscription and silences tab alerts
+  // the bell's switch for this device: off drops its push subscription and silences tab and in-app alerts
   const alertsOn = settings.alertsOn;
   const alertsOnRef = useRef(alertsOn);
   alertsOnRef.current = alertsOn;
@@ -144,6 +147,15 @@ export function App() {
   const machinesRef = useRef(machines); machinesRef.current = machines;
   const [updateRemote, setUpdateRemote] = useState(false);
   const [machineDialog, setMachineDialog] = useState<Machine | "new" | null>(null);
+  // Add PC from Settings or the palette leaves no trigger to return focus to once its dialog
+  // closes (Settings closed when it opened): the header's workspace-list toggle stands in
+  const addPcFocusReturn = useRef(false);
+  const closeMachineDialog = useCallback(() => {
+    setMachineDialog(null);
+    if (!addPcFocusReturn.current) return;
+    addPcFocusReturn.current = false;
+    focusWorkspaceListToggle();
+  }, []);
   const [newSessionMachineId, setNewSessionMachineId] = useState("local");
   const [health, setHealth] = useState<HealthInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -177,7 +189,7 @@ export function App() {
   // on a phone the drawer follows a swipe in from the left edge, and a swipe back (lib/edgeSwipe.ts)
   useEffect(() => watchDrawerSwipe(() => drawerOpenRef.current, setDrawerOpen), []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [view, setViewState] = useState<PaneView>("terminal");
+  const [lens, setLens] = useState<{ key: string; view: PaneView }>({ key: "", view: "terminal" });
   const [paletteOpen, setPaletteOpen] = useState(false);
   // the Files dialog, and the file open in the viewer (a path as the chat or the dialog gave it)
   const [filesOpen, setFilesOpen] = useState(false);
@@ -188,6 +200,8 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
+  // the dialog makes a tab in this workspace instead of a workspace, while set
+  const [newTab, setNewTab] = useState<NewTabTarget | null>(null);
   const [connected, setConnected] = useState(false);
   const [outputStopped, setOutputStopped] = useState(false);
   // the connection's role: the server's role-ack confirms it (no UI control today)
@@ -207,6 +221,8 @@ export function App() {
   const lastTurnRef = useRef<Map<string, number>>(new Map());
   const alertInAppRef = useRef(settings.alertInApp);
   alertInAppRef.current = settings.alertInApp;
+  const alertSoundRef = useRef(settings.alertSound);
+  alertSoundRef.current = settings.alertSound;
   const refetchTimer = useRef<number | null>(null);
   const snapshotRef = useRef<typeof snapshot>(null);
   snapshotRef.current = snapshot;
@@ -290,6 +306,25 @@ export function App() {
     });
   }, []);
 
+  // The alert sound (lib/alertSound.ts): heard also while the tab is hidden and a Focus silences
+  // system notifications; never for the pane open in front of the user.
+  const chime = useCallback((machine: Machine, pane: HerdrPane, kind: AlertSoundKind) => {
+    if (!alertsOnRef.current || !alertSoundRef.current) return;
+    const open = selectionRef.current;
+    if (document.visibilityState === "visible" && open.machineId === machine.id && open.paneId === pane.pane_id && !drawerOpenRef.current) return;
+    playAlertSound(kind);
+  }, []);
+
+  // a page plays audio only after a tap or key on it: each one lets the next chime play. A mouse
+  // activates the page on press, a touch only on release, so both ends of a tap try
+  useEffect(() => {
+    if (!settings.alertSound) return;
+    const unlock = () => { void unlockAlertSound(); };
+    const events = ["pointerdown", "pointerup", "keydown"] as const;
+    for (const event of events) window.addEventListener(event, unlock, true);
+    return () => { for (const event of events) window.removeEventListener(event, unlock, true); };
+  }, [settings.alertSound]);
+
   // One SSE subscription watches every PC, even when no terminal is selected.
   useEffect(() => {
     if (locked !== false) return;
@@ -319,7 +354,11 @@ export function App() {
         const pane = machine.snapshot?.panes.find((p) => p.pane_id === message.pane_id);
         const worked = trackTurn(turnStartRef.current, key, previous, message.agent_status, Date.now());
         if (worked !== null) lastTurnRef.current.set(key, worked);
-        if (pane && shouldNotifyStatus(previous, message.agent_status) && dropletAllows(alertsRef.current, message.agent_status, worked)) dropIn(machine, pane, message.agent_status === "blocked" ? "blocked" : "done");
+        if (pane && shouldNotifyStatus(previous, message.agent_status) && dropletAllows(alertsRef.current, message.agent_status, worked)) {
+          const kind = message.agent_status === "blocked" ? "blocked" : "done";
+          dropIn(machine, pane, kind);
+          chime(machine, pane, kind);
+        }
         if (pane && shouldNotifyStatus(previous, message.agent_status) && alertsOnRef.current && !pushOnRef.current && alertsAllow(alertsRef.current, message.agent_status)) showPaneStatusNotification(message.pane_id, `${machine.name} · ${displayPaneTitle(pane)}`, message.agent_status, () => selectTargetRef.current(machine.id, message.pane_id), machine.id);
         setMachines((list) => {
           let changed = false;
@@ -336,7 +375,10 @@ export function App() {
       if (message.type === "pane-exited") {
         const pane = machine.snapshot?.panes.find((p) => p.pane_id === message.pane_id);
         const worked = endedTurn(turnStartRef.current, lastTurnRef.current, paneStorageId(machine.id, message.pane_id), Date.now());
-        if (pane && dropletAllows(alertsRef.current, "done", worked)) dropIn(machine, pane, "ended");
+        if (pane && dropletAllows(alertsRef.current, "done", worked)) {
+          dropIn(machine, pane, "ended");
+          chime(machine, pane, "done");
+        }
       }
       if (message.type === "pane-exited" && alertsOnRef.current && !pushOnRef.current && alertsRef.current.done !== "off") {
         const pane = machine.snapshot?.panes.find((p) => p.pane_id === message.pane_id);
@@ -345,17 +387,19 @@ export function App() {
       if (message.type === "session-changed" || message.type === "pane-exited") scheduleRefetch();
     };
     return () => events.close();
-  }, [locked, scheduleRefetch, dropIn]);
+  }, [locked, scheduleRefetch, dropIn, chime]);
 
   const handleServerMessage = useCallback((message: ServerMessage) => {
     if (message.type === "error" && message.code === "output_stalled") setOutputStopped(true);
   }, []);
 
   const enableNotifications = useCallback(async () => {
-    const next = notificationState() === "granted" ? "granted" : await requestNotificationPermission();
+    // in-app alerts need no permission: the switch goes on whatever the browser answers
+    updateSettings({ alertsOn: true });
+    const current = notificationState();
+    const next = current === "default" ? await requestNotificationPermission() : current;
     setNotifications(next);
     if (next !== "granted") return false;
-    updateSettings({ alertsOn: true });
     try {
       const endpoint = await ensurePushSubscription(alertsRef.current);
       setPushOn(endpoint !== null);
@@ -488,15 +532,19 @@ export function App() {
   // a server that repaints the pane's screen instead (terminal_mirror) has a terminal lens too
   const terminalAttach = targetHerdr?.terminal_attach !== false || targetHerdr?.terminal_mirror === true;
 
-  // the lens follows the selected pane: each pane remembers its own
-  useEffect(() => {
-    if (selectedPaneId === null) return;
-    setViewState(storedView(selectedPaneId, selectedMachineId, selectedPane ? selectedAgent !== null : null, terminalAttach, settings.defaultView));
-  }, [selectedPaneId, selectedMachineId, selectedPane !== null, selectedAgent !== null, terminalAttach, settings.defaultView]);
+  // the lens follows the selected pane: each pane remembers its own. It is settled in the render
+  // that selects the pane, not in an effect after it: the pane's terminal attaches in that render's
+  // layout effect, and an attach in the previous pane's lens resized a pane whose lens is chat
+  const lensKey = JSON.stringify([selectedPaneId, selectedMachineId, selectedPane !== null, selectedAgent !== null, terminalAttach, settings.defaultView]);
+  let view = lens.view;
+  if (lens.key !== lensKey) {
+    if (selectedPaneId !== null) view = storedView(selectedPaneId, selectedMachineId, selectedPane ? selectedAgent !== null : null, terminalAttach, settings.defaultView);
+    setLens({ key: lensKey, view });
+  }
 
   const setView = useCallback(
     (next: PaneView) => {
-      setViewState(next);
+      setLens((current) => ({ ...current, view: next }));
       setAutoSelected(false);
       if (selectedPaneId === null) return;
       try {
@@ -508,11 +556,18 @@ export function App() {
     [selectedPaneId, selectedMachineId],
   );
 
+  // The bell says what this device does, whatever the browser's permission: in-app alerts need
+  // none, so they count as on. A device that has not answered the permission question is asked
+  // by the bell's tap; one that has answered gets a plain switch.
   const bell: { label: string; title: string; on: boolean; run: () => Promise<unknown> } =
-    notifications !== "granted"
-      ? { label: t("Enable notifications"), title: t("Notify me when a pane needs input or finishes"), on: false, run: enableNotifications }
-      : !alertsOn
-        ? { label: t("Alerts off"), title: t("Alerts off on this device — tap to turn them on"), on: false, run: enableNotifications }
+    !alertsOn
+      ? { label: t("Alerts off"), title: t("Alerts off on this device — tap to turn them on"), on: false, run: enableNotifications }
+      : notifications !== "granted"
+        ? !settings.alertInApp
+          ? { label: t("Enable notifications"), title: t("Notify me when a pane needs input or finishes"), on: false, run: enableNotifications }
+          : notifications === "default"
+            ? { label: t("Alerts on in the app only"), title: t("Alerts show while the app is open. Tap to allow them when it is closed too"), on: true, run: enableNotifications }
+            : { label: t("Alerts on in the app only"), title: t("Alerts show while the app is open. Tap to turn them off"), on: true, run: disableNotifications }
         : pushOn
           ? { label: t("Alerts on"), title: t("Alerts on — pushed to this device, even with the app closed. Tap to turn them off"), on: true, run: disableNotifications }
           : {
@@ -524,7 +579,8 @@ export function App() {
               on: true,
               run: disableNotifications,
             };
-  const bellVisible = notifications !== "unsupported" && notifications !== "denied";
+  // hidden only where it could do nothing: no system notifications and in-app alerts off
+  const bellVisible = notifications === "default" || notifications === "granted" || settings.alertInApp;
 
   useEffect(() => {
     document.title = selectedTitle ? `${selectedTitle} · herdr` : APP_TITLE;
@@ -545,6 +601,26 @@ export function App() {
       openNewSession: () => {
         setDrawerOpen(false);
         setNewSessionMachineId(selectedMachineId);
+        setNewTab(null);
+        setNewSessionOpen(true);
+      },
+      openNewTab: (target) => {
+        const machineId = target?.machineId ?? selectionRef.current.machineId;
+        const roster = machinesRef.current.find((m) => m.id === machineId)?.snapshot;
+        // pane ids repeat across PCs: the selected pane counts only on the PC the tab is for
+        const selectedPaneId = selectionRef.current.machineId === machineId ? selectionRef.current.paneId : null;
+        const workspaceId = target?.workspaceId ?? roster?.panes.find((pane) => pane.pane_id === selectedPaneId)?.workspace_id;
+        const workspace = roster?.workspaces.find((candidate) => candidate.workspace_id === workspaceId);
+        if (!roster || !workspace) return;
+        // the tab's folder is the workspace's: a worktree's checkout, else where the pane in
+        // front (the selected one, else the one herdr has in front, else the first) is
+        const panes = roster.panes.filter((pane) => pane.workspace_id === workspace.workspace_id);
+        const inFront = panes.find((pane) => pane.pane_id === selectedPaneId)
+          ?? panes.find((pane) => pane.pane_id === roster.layouts?.find((layout) => layout.tab_id === workspace.active_tab_id)?.focused_pane_id)
+          ?? panes[0];
+        setDrawerOpen(false);
+        setNewSessionMachineId(machineId);
+        setNewTab({ workspaceId: workspace.workspace_id, workspaceLabel: workspace.label, cwd: workspace.worktree?.checkout_path ?? inFront?.cwd ?? null, number: workspace.tab_count + 1 });
         setNewSessionOpen(true);
       },
       openPalette: () => setPaletteOpen(true),
@@ -552,17 +628,24 @@ export function App() {
         setDrawerOpen(false);
         setSettingsOpen(true);
       },
+      openAddPc: () => {
+        // the new PC reports its progress in the sidebar: nothing should sit over it
+        setSettingsOpen(false);
+        setUpdateRemote(false);
+        addPcFocusReturn.current = true;
+        setMachineDialog("new");
+      },
       toggleSidebar: () => {
         if (window.matchMedia("(max-width: 768px)").matches) setDrawerOpen((open) => !open);
         else setSidebarCollapsed((collapsed) => !collapsed);
       },
       toggleTheme: () => updateSettings({ theme: resolvedTheme === "dark" ? "light" : "dark" }),
       lock: canSignOut ? () => void lock() : null,
-      enableNotifications: bellVisible && !bell.on ? () => void enableNotifications() : null,
+      enableNotifications: bellVisible && bell.run === enableNotifications ? () => void enableNotifications() : null,
       refresh: () => void load(),
       openFiles: selectedPaneId !== null ? () => { setDrawerOpen(false); setFilesOpen(true); } : null,
     }),
-    [selectPane, selectedPaneId, selectedMachineId, setView, view, updateSettings, resolvedTheme, canSignOut, lock, bellVisible, bell.on, enableNotifications, load],
+    [selectPane, selectedPaneId, selectedMachineId, setView, view, updateSettings, resolvedTheme, canSignOut, lock, bellVisible, bell.run, enableNotifications, load],
   );
 
   useShortcuts(actions, locked === false);
@@ -640,6 +723,12 @@ export function App() {
         ) : (
           <><Brand /><span className="machine-context-name">{selectedMachine?.name ?? selectedMachineId}</span></>
         )}
+        {selectedPane && selectedWorkspace && (
+          <button type="button" className="btn btn-ghost new-tab-button" title={t("New tab in {workspace}", { workspace: selectedWorkspace.label })} onClick={() => actions.openNewTab()}>
+            <Plus aria-hidden="true" />
+            <span>{t("New tab")}</span>
+          </button>
+        )}
         {selectedPane && (
           <div className="segmented view-switch" role="group" aria-label="Pane view">
             <button type="button" aria-pressed={view === "chat"} onClick={() => setView("chat")} title={t("Chat transcript (⌘⇧J)")}>
@@ -696,13 +785,17 @@ export function App() {
       <div className="app-body">
         <aside id="workspace-drawer" className={`sidebar${drawerOpen ? " is-open" : ""}`}>
           {error && <div className="error-state" role="alert"><p>{error}</p><button className="btn" onClick={() => void load()}>{t("Retry")}</button></div>}
-          <MachineSidebar version={health?.herdr?.version ?? null} machines={machines} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onAdd={() => { setUpdateRemote(false); setMachineDialog("new"); }} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewSessionOpen(true); setDrawerOpen(false); }} />
+          <MachineSidebar version={health?.herdr?.version ?? null} machines={machines} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewTab(null); setNewSessionOpen(true); setDrawerOpen(false); }} />
         </aside>
 
         {drawerOpen && <div className="scrim" aria-hidden="true" onClick={() => setDrawerOpen(false)} />}
 
         {/* a file path in the chat opens in the viewer, relative to the selected pane's folder */}
         <OpenFileContext.Provider value={selectedPaneId !== null ? viewFile : null}>
+        <div className="pane-column">
+        {snapshot && selectedPane && selectedWorkspace && (
+          <TabStrip snapshot={snapshot} workspace={selectedWorkspace} selectedPane={selectedPane} onSelectPane={selectPane} onNewTab={() => actions.openNewTab()} />
+        )}
         <main className="terminal-host">
           <PaneTerminal
             key={selectedMachineId}
@@ -724,6 +817,7 @@ export function App() {
             onServerMessage={handleServerMessage}
           />
         </main>
+        </div>
         </OpenFileContext.Provider>
       </div>
 
@@ -731,6 +825,7 @@ export function App() {
         key={newSessionMachineId}
         machineName={machines.find((m) => m.id === newSessionMachineId)?.name ?? newSessionMachineId}
         open={newSessionOpen}
+        tab={newTab}
         defaultCwd={newSessionMachineId === selectedMachineId ? selectedPane?.cwd ?? null : null}
         onClose={() => setNewSessionOpen(false)}
         onCreated={(paneId) => {
@@ -739,7 +834,7 @@ export function App() {
           void load();
         }}
       /></MachineContext.Provider>
-      {machineDialog && <MachineDialog updateRemote={updateRemote} machine={machineDialog === "new" ? undefined : machineDialog} onClose={() => setMachineDialog(null)} onConnected={(id) => { setMachineDialog(null); selectTarget(id, null); void load(); }} />}
+      {machineDialog && <MachineDialog updateRemote={updateRemote} machine={machineDialog === "new" ? undefined : machineDialog} onClose={closeMachineDialog} onConnected={(id) => { closeMachineDialog(); selectTarget(id, null); void load(); }} />}
       <Droplet onOpen={(machineId, paneId) => {
         // an ended pane's card outlives the pane: the refetch has dropped it, and selecting it attaches nothing
         if (!machinesRef.current.find((m) => m.id === machineId)?.snapshot?.panes.some((p) => p.pane_id === paneId)) return;
