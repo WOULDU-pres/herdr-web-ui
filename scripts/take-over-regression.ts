@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -24,12 +25,17 @@ export async function checkTakeOver(browser: Browser, origin: string): Promise<v
       if (!localStorage.getItem("herdr-web-ui:settings")) localStorage.setItem("herdr-web-ui:settings", JSON.stringify({ language: "en" }));
       // what this page's socket was told, to wait on the server's answers
       const frames: string[] = [];
+      Object.assign(window, { takenText_: false });
       (window as unknown as { frames_: string[] }).frames_ = frames;
       const Native = window.WebSocket;
       class Recording extends Native {
         constructor(url: string | URL, protocols?: string | string[]) {
           super(url, protocols);
-          this.addEventListener("message", (event) => { try { frames.push(JSON.parse(String(event.data)).type); } catch {} });
+          this.addEventListener("message", (event) => { try {
+            const message = JSON.parse(String(event.data));
+            frames.push(message.type);
+            if (message.type === "pty-data" && message.data.includes("terminal attach taken over")) Object.assign(window, { takenText_: true });
+          } catch {} });
         }
       }
       Object.assign(window, { WebSocket: Recording });
@@ -59,11 +65,17 @@ export async function checkTakeOver(browser: Browser, origin: string): Promise<v
     await waiting(here).waitFor();
     await openHere(here).waitFor();
     if (process.env.UI_EVIDENCE_DIR) await here.screenshot({ path: join(process.env.UI_EVIDENCE_DIR, "take-over-taken.png") });
-    console.log("PASS Open here takes the pane, and the bridge it was taken from waits with the same button");
+    assert.equal(await here.evaluate(() => (window as unknown as { takenText_: boolean }).takenText_), false);
+    console.log("PASS Open here takes the pane without painting its takeover diagnostic, and the displaced bridge waits");
+    await openHere(here).click();
+    await told(here, "attach-resumed");
+    await waiting(here).waitFor({ state: "detached" });
+    await openHere(there).waitFor();
+    console.log("PASS the displaced bridge takes it back only after another click");
   } finally {
     await context.close();
-    other.stop(true);
-    await workspaceClose(created.workspace.workspace_id).catch(() => undefined);
+    other.stop();
+    await workspaceClose(created.workspace.workspace_id).catch((error) => { if (error?.code !== "workspace_not_found") throw error; });
     rmSync(root, { recursive: true, force: true });
   }
 }

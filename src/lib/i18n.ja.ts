@@ -471,7 +471,7 @@ export const JA: Record<string, string> = {
   "Reconnect": "再接続",
   "Another app has this pane open. It connects here as soon as that app lets go.": "別のアプリがこのペインを開いています。そのアプリが離すとすぐにここへ接続します。",
   "Open here": "ここで開く",
-  "Take this pane from the other app. It disconnects there and waits in turn.": "ほかのアプリからこのペインを引き継ぎます。そちらは接続が切れ、待機状態になります。",
+  "Take this pane from another web app or terminal attach. That connection will close.": "ほかのウェブアプリや terminal attach からこのペインを引き継ぎます。その接続は終了します。",
   "Input held until the terminal is ready:": "端末の準備ができるまで保持した入力:",
   "{count} special key dropped": "特殊キー {count} 個を破棄しました",
   "{count} special keys dropped": "特殊キー {count} 個を破棄しました",

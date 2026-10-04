@@ -96,10 +96,15 @@ it("takes a held pane only from a server that knows how, while interacting with 
   expect(client.takeOver("w1:p1")).toBe(false);
   client.attach("w1:p1", 80, 24);
   expect(client.takeOver("w1:p1")).toBe(true);
+  // The open handler replays role and attach state, never the explicit takeover.
+  socket.open();
+  socket.receive(snapshot(["submit", "input-ready", "take-over"]));
+  expect(takes(socket)).toEqual([{ type: "take-over", pane_id: "w1:p1" }]);
   client.setMode("observe");
   expect(client.takeOver("w1:p1")).toBe(false);
   expect(takes(socket)).toEqual([{ type: "take-over", pane_id: "w1:p1" }]);
   client.close();
+  expect(client.takeOver("w1:p1")).toBe(false);
 });
 
 it("attaches a grid the chat lens covers without resizing the shared pty, on a reconnect too, until it drives the size again", () => {

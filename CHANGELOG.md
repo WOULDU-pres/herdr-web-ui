@@ -8,6 +8,9 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 ## [Unreleased]
 
 ### Added
+- **Open here** on a held pane explicitly takes it from another web bridge or standalone
+  `herdr terminal attach`. A displaced bridge waits with the same button; it never takes the pane
+  back automatically. Available on supporting bridges, for interact connections only.
 - `HERDR_WEB_PASTE_DIR` saves pasted and attached files to one directory instead of
   `.herdr-web-ui/` in each pane's project. It is read by the server, for the panes of its own
   PC; a remote PC keeps the default.
@@ -272,9 +275,6 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 - Choose the terminal input line or direct typing on desktop as well as touch screens, and
   customize or unbind the app's Mod+Shift shortcuts with conflict checks and reset.
   ([#334](https://github.com/devswha/herdr-web-ui/pull/334))
-- A pane another web UI server has open (a Mac's server beside this PC's, on the same herdr)
-  offers Open here on its waiting notice, which takes the terminal from that server. The server it
-  was taken from waits in turn, with the same button, instead of ending the terminal.
 
 ### Changed
 - In the sidebar's By workspace view, a workspace with one pane keeps its numbered header and

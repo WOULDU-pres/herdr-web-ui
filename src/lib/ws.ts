@@ -236,7 +236,7 @@ export class HerdrSocket {
     return this.connected && this.mode === "interact" && this.features.has("take-over");
   }
 
-  /** Takes the pane's terminal from the other web bridge that holds it; that bridge then waits in turn. */
+  /** Explicitly takes the pane's attach slot; never queued or replayed on reconnect. */
   takeOver(paneId: string): boolean {
     if (!this.canTakeOver() || !this.attached.has(paneId)) return false;
     this.rawSend({ type: "take-over", pane_id: paneId });

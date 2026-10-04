@@ -58,6 +58,7 @@ import { codexQuestionsCollapsed, handlePromptRequest } from "./prompt.ts";
 import { secretPrompt, validSecret } from "../shared/secret-prompt.ts";
 import { PasteImageError, savePaneImage } from "./paste.ts";
 import { PtySession } from "./pty/session.ts";
+import { AttachOutputTail, isTakeoverExit } from "./attach-output.ts";
 import { attachableIdentity, sidecarAvailable } from "./pty/sidecar.ts";
 import { MirrorSession } from "./mirror.ts";
 import { mirrorInput } from "./mirror-input.ts";
@@ -89,8 +90,6 @@ const ATTACH_READ_RACE_RE = /has a read in progress; retry/;
  * last line, after its teardown: the same words earlier in the pane's own output are not it.
  */
 const ATTACH_HELD_RE = /terminal attach failed: [^\r\n]*(?:already has an attached client|retry with --takeover)[^\r\n]*\s*$/;
-/** herdr's last words to an attach another client took the slot from (`--takeover`): it waits, as a refused one does */
-const ATTACH_TAKEN_RE = /terminal attach taken over\s*$/;
 /** how long refused attaches are retried: herdr's longest read of that kind */
 const ATTACH_RETRY_FOR_MS = 20_000;
 const ATTACH_RETRY_MS = 50;
@@ -277,8 +276,8 @@ interface PaneAttachment {
   stalled: Map<Client, number>;
   /** another web bridge holds herdr's one attach slot for this terminal: waiting for it to let go */
   held?: boolean;
-  /** the next try at a held terminal; a closed attachment cancels it */
-  heldRetry?: ReturnType<typeof setTimeout>;
+  /** the next held or read-race retry; takeover and close both cancel it */
+  retry?: ReturnType<typeof setTimeout>;
   /** a held terminal's next try takes the slot from the other bridge (`take-over`); a pty attachment only */
   takeOver?: () => void;
   /** the next look for the terminal a pane lives on after herdr ended its attach; a closed attachment cancels it */
@@ -559,7 +558,7 @@ export function createServer(
     const attachment = attachments.get(paneId);
     if (!attachment) return;
     attachments.delete(paneId);
-    clearTimeout(attachment.heldRetry);
+    clearTimeout(attachment.retry);
     clearTimeout(attachment.relookup);
     // its members hold nothing on this pane any more (a pty that exited leaves them on
     // the "terminal ended" screen): a stale entry would read as a live claim in
@@ -678,10 +677,13 @@ export function createServer(
     /** the next start takes the slot; asked for while a try was still running, the one after it */
     let takeover = false;
     let takeoverWanted = false;
-    /** a try (or the attach it became) is running: a take-over waits for its end */
+    /** an attempt, live attach or terminal lookup is running: another start must wait */
     let trying = false;
+    /** Starts at most one attempt, cancelling any scheduled retry before it can overlap. */
     const again = (): void => {
-      if (attachments.get(paneId) !== attachment) return;
+      if (attachments.get(paneId) !== attachment || trying) return;
+      clearTimeout(attachment.retry);
+      attachment.retry = undefined;
       if (attachment.clients.size === 0) {
         closeAttachment(paneId);
         return;
@@ -698,7 +700,7 @@ export function createServer(
     /** the terminal attached to: a pane keeps its id across a server handoff, its terminal does not */
     let attachedTerminal = terminalId;
     const start = (): PtySession => {
-      const takingOver = takeover;
+      let takingOver = takeover;
       takeover = false;
       trying = true;
       let output = ""; // this attach's own last words: herdr's refusal is in them
@@ -708,6 +710,20 @@ export function createServer(
       let heldSince = 0;
       let holding = false;
       let holdTimer: ReturnType<typeof setTimeout> | undefined;
+      const outputTail = new AttachOutputTail();
+      let tailTimer: ReturnType<typeof setTimeout> | undefined;
+      const flushTail = (taken = false): void => {
+        clearTimeout(tailTimer);
+        const data = outputTail.flush(taken);
+        if (data) forward(data);
+      };
+      const publish = (data: string): void => {
+        clearTimeout(tailTimer);
+        const visible = outputTail.push(data);
+        if (visible) forward(visible);
+        // A pane may print the same bytes without exiting: never keep its text indefinitely.
+        if (outputTail.pending) tailTimer = setTimeout(flushTail, ATTACH_HOLD_MS);
+      };
       /** ended before its exit came: what it still prints is no attach's */
       let retired = false;
       const release = (): void => {
@@ -715,7 +731,7 @@ export function createServer(
         if (held === null) return;
         const data = held;
         held = null;
-        if (data) forward(data);
+        if (data) publish(data);
       };
       const took = (): void => {
         // a closed attachment's kill skips onExit, which would clear this timer: a newer
@@ -735,6 +751,10 @@ export function createServer(
           ended(null);
           return;
         }
+        // A click is consumed by success, including an ordinary retry that won the slot.
+        takeoverWanted = false;
+        takeover = false;
+        takingOver = false;
         // the attach took: a pane that waited for another bridge is this bridge's again
         if (attachment.held) {
           attachment.held = false;
@@ -747,6 +767,7 @@ export function createServer(
       const ended = (code: number | null): void => {
         trying = false;
         clearTimeout(holdTimer);
+        clearTimeout(tailTimer);
         if (attachments.get(paneId) !== attachment) return;
         if (attachment.ready) broadcast(paneId, { type: "input-ready", pane_id: paneId, ready: false });
         attachment.ready = false;
@@ -754,24 +775,14 @@ export function createServer(
         if (code !== 0 && ATTACH_READ_RACE_RE.test(output) && now - (refusedSince ??= now) < retryFor) {
           held = null;
           retries += 1;
-          // a take-over that raced a read is still one
-          if (takingOver) takeover = true;
-          setTimeout(() => {
-            if (attachments.get(paneId) !== attachment) return;
-            try {
-              attachment.pty = start();
-            } catch (error) {
-              // a throw here is uncaught and takes the whole server down: end this
-              // pane's terminal instead, on the exited pty the record still holds
-              const message = spawnFailure(paneId, error);
-              broadcast(paneId, { type: "error", code: "command_failed", message });
-              broadcast(paneId, { type: "pty-exit", pane_id: paneId, code: null });
-              closeAttachment(paneId);
-            }
-          }, Math.min(ATTACH_RETRY_MS * 2 ** (retries - 1), ATTACH_RETRY_MAX_MS));
+          // An explicit request survives a read race only until an attach succeeds.
+          takeover = takingOver || takeoverWanted;
+          takeoverWanted = false;
+          attachment.retry = setTimeout(again, Math.min(ATTACH_RETRY_MS * 2 ** (retries - 1), ATTACH_RETRY_MAX_MS));
           return;
         }
-        if (code !== 0 && (ATTACH_HELD_RE.test(output) || ATTACH_TAKEN_RE.test(output))) {
+        if (code !== 0 && (ATTACH_HELD_RE.test(output) || isTakeoverExit(output))) {
+          flushTail(isTakeoverExit(output));
           held = null; // herdr's refusal is not the pane's output: never painted, and it repeats
           // waiting for the other bridge is not a read race: the next one gets its full budget
           refusedSince = null;
@@ -786,11 +797,16 @@ export function createServer(
             takeover = true;
             again();
           } else {
-            attachment.heldRetry = setTimeout(again, heldRetry);
+            attachment.retry = setTimeout(again, heldRetry);
           }
           return;
         }
+        takeoverWanted = false;
+        takeover = false;
+        takingOver = false;
+        trying = true; // a live-handoff lookup owns the next start until it finishes
         release();
+        flushTail();
         const finish = (): void => {
           broadcast(paneId, { type: "pty-exit", pane_id: paneId, code });
           closeAttachment(paneId);
@@ -848,7 +864,7 @@ export function createServer(
         onData: (data) => {
           if (retired || attachments.get(paneId) !== attachment) return;
           output = (output + data).slice(-1024);
-          if (held === null) return forward(data);
+          if (held === null) return publish(data);
           held += data;
           if (!holding && !ATTACH_PREAMBLE_RE.test(held)) {
             holding = true;
@@ -866,7 +882,7 @@ export function createServer(
         takeoverWanted = true;
         return;
       }
-      clearTimeout(attachment.heldRetry);
+      clearTimeout(attachment.retry);
       takeover = true;
       again();
     };
