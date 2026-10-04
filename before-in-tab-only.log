@@ -1,0 +1,33 @@
+PASS no alert sound before the page was tapped
+PASS a pane that waits chimes, the one in front does not
+PASS Settings turns the alert sound off and on, with a preview
+PASS two panes that wait together chime once
+143 |     await report(thirdPane, "blocked");
+144 |     await seen(thirdPane, "blocked");
+145 |     await seen(thirdPane, "blocked", second);
+146 |     await settled(page);
+147 |     await settled(second);
+148 |     assert.deepEqual([...(await chimes()).slice(before), ...await chimes(second)], [660, 880], "one chime across two tabs");
+                 ^
+AssertionError: one chime across two tabs
++ actual - expected
+
+  [
+    660,
+    880,
++   660,
++   880
+  ]
+
+ generatedMessage: false,
+     actual: [ 660, 880, 660, 880 ],
+   expected: [ 660, 880 ],
+   operator: "deepStrictEqual",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at checkAlertSound (/home/hwjoo/01-projects/2026/projects/herdr-web-ui-alert-sound/scripts/alert-sound-regression.ts:148:12)
+      at processTicksAndRejections (native:7:39)
+
+Bun v1.4.2 (Linux x64)
+exit 1

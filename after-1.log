@@ -1,0 +1,7 @@
+PASS no alert sound before the page was tapped
+PASS a pane that waits chimes, the one in front does not
+PASS Settings turns the alert sound off and on, with a preview
+PASS two panes that wait together chime once
+PASS two open tabs chime once for the same alert
+ALL OK
+exit 0
