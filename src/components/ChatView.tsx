@@ -38,6 +38,7 @@ const ChatHistoryContext = createContext("");
 import type { TypedAnswer } from "../lib/promptAnswer.ts";
 import type { AgentStatus, ConversationMetadata, ConversationPart, ConversationTurn, InteractivePrompt } from "../../shared/protocol.ts";
 import { currentLocale, useT } from "../lib/i18n.ts";
+import { WaterDrop } from "./WaterDrop.tsx";
 
 const TRANSCRIPT_LINES = 400;
 const POLL_MS = 2000;
@@ -316,6 +317,7 @@ function WorkBlockView({ paneId, parts, duration, live, defaultOpen, showThinkin
       part.kind === "thinking" ? <ThinkingRow key={index} text={part.text} />
         : part.kind === "text" ? <div key={index} className="work-narration"><Markdown>{part.text}</Markdown></div>
           : part.kind === "tool" ? <WorkRow key={index} paneId={paneId} part={part} /> : null)}</div>}
+    <WaterDrop items=".work-block-head, .work-row-head" scale={1.02} radius="var(--radius-md)" />
   </section>;
 }
 
@@ -426,7 +428,7 @@ const Turn = memo(function Turn({ paneId, turn, live, last, showThinking }: Turn
       {text.length > 0 && <div className="chat-bubble"><Markdown>{text}</Markdown></div>}
       {/* the skill this message invoked (omp, omo, pi): the runtime recorded its instructions with it */}
       <SkillActivityList parts={turn.parts} />
-      <div className="chat-turn-meta">{time !== null && <time dateTime={turn.ts ?? undefined}>{time}</time>}{text.length > 0 && <CopyButton text={text} label={t("Copy message")} />}</div>
+      <div className="chat-turn-meta">{time !== null && <time dateTime={turn.ts ?? undefined}>{time}</time>}{text.length > 0 && <CopyButton text={text} label={t("Copy message")} />}<WaterDrop items=".chat-copy, .chat-meta-btn" scale={1.3} /></div>
     </article>;
   }
   const { work, answer } = splitTurn(turn.parts);
@@ -440,6 +442,7 @@ const Turn = memo(function Turn({ paneId, turn, live, last, showThinking }: Turn
     {answerText.length > 0 && <div className="chat-turn-meta chat-agent-meta">
       <CopyButton className="chat-meta-btn" text={answerText} label={t("Copy as markdown")}>MD</CopyButton>
       <CopyButton className="chat-meta-btn" text={plainText(answerText)} label={t("Copy as plain text")}>TXT</CopyButton>
+      <WaterDrop items=".chat-copy, .chat-meta-btn" scale={1.3} />
       {time !== null && <time dateTime={turn.ts ?? undefined}>{time}</time>}
     </div>}
   </article>;

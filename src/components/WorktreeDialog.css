@@ -91,3 +91,15 @@
   color: var(--status-blocked);
   overflow-wrap: anywhere;
 }
+
+/* with water drops on (WaterDrop.tsx), the list holds a drop that runs between the worktrees: the list
+   is a stacking context of its own so the drop's layer sits under them, and the drop is the hover
+   and the keyboard's highlight */
+:root[data-drops="on"] .worktree-list {
+  position: relative;
+  isolation: isolate;
+}
+
+:root[data-drops="on"] .worktree-row:is(:hover, :focus-visible) {
+  background: transparent;
+}

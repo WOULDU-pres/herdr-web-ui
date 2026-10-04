@@ -14,6 +14,7 @@ import type { LucideIcon } from "lucide-react";
 import "./RowMenu.css";
 
 import { useT } from "../lib/i18n.ts";
+import { WaterDrop } from "./WaterDrop.tsx";
 
 export interface RowMenuItem {
   id: string;
@@ -174,6 +175,7 @@ export function RowMenu({ anchor, title, subtitle, items, align = "end", onClose
           </button>
         </Fragment>
       ))}
+      <WaterDrop items=".menu-item" scale={1.03} radius="var(--radius-md)" />
     </div>,
     document.body,
   );

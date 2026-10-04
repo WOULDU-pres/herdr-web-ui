@@ -11,7 +11,8 @@
  * menu as a sheet. With keys: F2 and Delete on a focused tab. A close asks first only when it
  * costs more than the tab: an agent still at work in it, or the workspace's last tab.
  *
- * A glass drop follows the pointer and the keyboard focus from tab to tab (TabDrop.tsx).
+ * With water drops on (Settings), a drop follows the pointer and the keyboard focus from tab to tab
+ * (TabDrop.tsx).
  */
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { ChevronDown, Pencil, Plus, Terminal, X } from "lucide-react";
@@ -24,6 +25,7 @@ import { focusWorkspaceListToggle } from "../lib/focus.ts";
 import { useT } from "../lib/i18n.ts";
 import { customTabLabel, tabLabel } from "../lib/tabName.ts";
 import { useMachineApi, useMachineId } from "../lib/machineContext.tsx";
+import { useSettings } from "../lib/settings.ts";
 import { knownStatus } from "../lib/status.ts";
 import { AgentMark } from "./AgentMark.tsx";
 import { ConfirmDialog } from "./ConfirmDialog.tsx";
@@ -46,6 +48,7 @@ export interface TabStripProps {
 
 export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNewTab }: TabStripProps) {
   const t = useT();
+  const { settings } = useSettings();
   const machineId = useMachineId();
   const { closeTab, renameTab } = useMachineApi();
   const strip = useRef<HTMLDivElement>(null);
@@ -298,7 +301,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
         </button>
         {error && <span className="tab-strip-error" role="alert">{error}</span>}
       </div>
-      <TabDrop strip={strip} />
+      {settings.waterDrops && <TabDrop strip={strip} />}
       {picker && <RowMenu anchor={picker.anchor} title={panesOf(picker.tab).length > 1 ? t("Panes in {tab}", { tab: nameOf(picker.tab) }) : nameOf(picker.tab)} items={pickerItems(picker.tab)} align="start" onClose={() => setPicker(null)} />}
       {confirm && <ConfirmDialog title={confirm.title} body={confirm.body} confirmLabel={t("Close tab")} onConfirm={async () => { await close(confirm.tab); setConfirm(null); }} onClose={() => setConfirm(null)} />}
     </>

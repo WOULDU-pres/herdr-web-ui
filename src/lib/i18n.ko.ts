@@ -64,6 +64,8 @@ export const KO: Record<string, string> = {
   "Auto": "자동",
   "Show thinking": "생각 표시",
   "Include the agent's reasoning blocks": "에이전트의 추론 블록을 함께 보여줍니다",
+  "Water drops": "물방울 효과",
+  "A drop of water follows the pointer over tabs, buttons and lists": "탭, 버튼, 목록 위에서 물방울이 마우스를 따라다닙니다",
   "Chat font size": "채팅 글자 크기",
   "Messages, code and prompt cards in the chat view": "채팅 화면의 메시지, 코드, 프롬프트 카드",
   "Decrease chat font size": "채팅 글자 작게",

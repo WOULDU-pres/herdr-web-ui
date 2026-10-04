@@ -12,6 +12,7 @@ import { NeedsInput } from "./NeedsInput.tsx";
 import { UsageMeters } from "./UsageMeters.tsx";
 import "./Machines.css";
 import { useT } from "../lib/i18n.ts";
+import { WaterDrop } from "./WaterDrop.tsx";
 
 declare const __APP_VERSION__: string;
 
@@ -44,6 +45,7 @@ export function MachineSidebar(props: Props) {
         <button className="btn btn-ghost sidebar-footer-action" title={t("Settings (⌘⇧,)")} onClick={props.actions.openSettings}><Settings aria-hidden="true" />{t("Settings")}</button>
         <UsageMeters />
       </div>
+      <WaterDrop items=".sidebar-footer-action, .usage-strip" scale={1.04} radius="var(--radius-md)" />
       <div className="sidebar-brandline">
         <span className="sidebar-app-name">herdr web ui v{__APP_VERSION__}</span>
         {props.version && <span className="pill">herdr {props.version}</span>}
@@ -81,6 +83,7 @@ function MachineGroup({ machine, ...props }: Props & { machine: Machine }) {
       </button>
       <button className="sidebar-row-action" disabled={!online} aria-label={t("New workspace on {name}", { name: machine.name })} title={t("New workspace")} onClick={() => props.onNew(machine.id)}><Plus aria-hidden="true" /></button>
       {machine.kind === "ssh" && <button className="sidebar-row-action" aria-label={t("Manage {name}", { name: machine.name })} title={t("Manage PC")} aria-expanded={editing} onClick={() => { setEditing(!editing); setConfirmDelete(false); }}><SlidersHorizontal aria-hidden="true" /></button>}
+      <WaterDrop items=".machine-toggle, .sidebar-row-action" scale={1.03} radius="var(--radius-md)" />
     </header>
     {/* connected is the norm and says nothing new; every other state is spelled out */}
     {machine.action_required || machine.updating ? <MachineActionNotice machine={machine} onSetup={props.onSetup} /> : <p className={`machine-state is-${machine.state}${online ? " visually-hidden" : ""}`} role="status" title={machine.error ?? undefined}>

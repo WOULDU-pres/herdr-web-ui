@@ -1,50 +1,9 @@
-/* The water drop under the pointer on the tab row (TabDrop.tsx): a layer over the whole window,
-   between the tab row's colour and its tabs (--z-tab-row, TabStrip.css), so the drop spills onto
-   the header and the pane under the names, over the chat and the terminal. The drop and its beads
-   are plain shapes; the filter makes them one liquid and paints the water with the --tab-drop-*
-   colours. A capsule in every palette, report's square corners included: it is water. */
+/* The tab row's water drop (TabDrop.tsx): a layer over the whole window, between the tab row's
+   colour and its tabs (--z-tab-row, TabStrip.css), so the drop spills onto the header and the pane
+   under the names, over the chat and the terminal. The drop's look is shared (WaterDrop.css). */
 .tab-drop-layer {
   position: fixed;
   inset: 0;
   z-index: var(--z-tab-drop);
   pointer-events: none;
-}
-
-.tab-drop-defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-}
-
-.tab-water-body { flood-color: var(--tab-drop-body); }
-.tab-water-edge { flood-color: var(--tab-drop-edge); }
-.tab-water-rim { flood-color: var(--tab-drop-rim); }
-.tab-water-shade { flood-color: var(--tab-drop-shade); }
-.tab-water-light { lighting-color: var(--tab-drop-light); }
-
-.tab-drop-liquid {
-  position: absolute;
-}
-
-.tab-drop,
-.tab-drop-bead {
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: var(--text-strong);
-}
-
-.tab-drop {
-  width: 0;
-  height: 0;
-  border-radius: var(--radius-pill);
-  opacity: 0;
-}
-
-.tab-drop.is-on {
-  opacity: 1;
-}
-
-.tab-drop-bead {
-  border-radius: 50%;
 }

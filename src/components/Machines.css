@@ -331,3 +331,15 @@
 
 /* an update in progress is news, not an error */
 .machine-action.is-updating .machine-action-text strong { color: var(--status-working); }
+
+/* with water drops on (WaterDrop.tsx), a PC's header holds a drop that runs between its name and its
+   buttons: the header is a stacking context of its own so the drop's layer sits under them, and the
+   drop is their hover */
+:root[data-drops="on"] .machine-header {
+  position: relative;
+  isolation: isolate;
+}
+
+:root[data-drops="on"] .machine-header .sidebar-row-action:is(:hover, :focus-visible) {
+  background: transparent;
+}

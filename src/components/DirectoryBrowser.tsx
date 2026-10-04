@@ -8,6 +8,7 @@ import { ApiError } from "../lib/api.ts";
 import { formatBytes } from "../lib/bridgeProgress.ts";
 import { useMachineApi } from "../lib/machineContext.tsx";
 import { useT } from "../lib/i18n.ts";
+import { WaterDrop } from "./WaterDrop.tsx";
 
 export interface DirectoryBrowserProps {
   /** where to open: the path typed so far (absolute, `~` or `~/…`); empty or unreadable opens home */
@@ -101,6 +102,7 @@ export function DirectoryBrowser({ start, onPick, onOpenFile }: DirectoryBrowser
           ))}
           {listing !== null && listing.directories.length === 0 && (listing.files ?? []).length === 0 && <li className="dir-browser-note">{t(onOpenFile ? "Nothing here" : "No folders here")}</li>}
           {listing?.truncated && <li className="dir-browser-note">{t("Showing the first {n} folders; type the rest of the path to go further.", { n: listing.directories.length })}</li>}
+          <WaterDrop as="li" items=".dir-browser-item" scale={1.01} radius="var(--radius-sm)" />
         </ul>
       )}
       <div className="dir-browser-footer">

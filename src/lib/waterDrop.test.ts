@@ -1,9 +1,12 @@
 import { describe, expect, it } from "bun:test";
 
-import { cssTime, dropBox, stretchBox, thinness, threadBeads, type DropBox } from "./tabDrop.ts";
+import { cssTime, dropBox, runOf, stretchBox, thinness, threadBeads, type DropBox } from "./waterDrop.ts";
 
 const row = { left: 0, right: 600 };
 const tab = (left: number, width = 80): DropBox => ({ left, top: 52, width, height: 34 });
+// a sidebar row: wide and short, stacked down a list
+const listRow = (top: number): DropBox => ({ left: 12, top, width: 276, height: 56 });
+const list = { left: 0, right: 300, top: 0, bottom: 600 };
 
 /** a repeatable stand-in for Math.random */
 function seeded(seed: number): () => number {
@@ -14,7 +17,7 @@ function seeded(seed: number): () => number {
   };
 }
 
-describe("tab drop", () => {
+describe("water drop", () => {
   it("reads its duration token however the build writes it", () => {
     expect(cssTime("520ms")).toBe(520);
     // the production build's minifier turns 520ms into .52s
@@ -25,16 +28,22 @@ describe("tab drop", () => {
 
   it("sits centred over its tab, 1.25 times its size, spilling past the row above and below", () => {
     const box = dropBox(tab(100), row);
-    expect(box.width).toBe(100);
-    expect(box.height).toBe(42.5);
-    expect(box.left).toBe(90);
-    expect(box.top).toBe(47.75);
-    expect(box.top + box.height).toBe(90.25);
+    expect(box).toEqual({ left: 90, top: 47.75, width: 100, height: 42.5 });
   });
 
-  it("moves in from the row's ends instead of shrinking", () => {
+  it("moves in from the bounds instead of shrinking, on every side the bounds name", () => {
     expect(dropBox(tab(4), row)).toMatchObject({ left: 2, width: 100 });
     expect(dropBox(tab(520), row)).toMatchObject({ left: 498, width: 100 });
+    // a list bounds it down the page too: the last row's drop stays inside the list
+    expect(dropBox(listRow(560), list, 1.1)).toMatchObject({ top: 600 - 2 - 56 * 1.1 });
+    expect(dropBox(listRow(0), list, 1.1)).toMatchObject({ top: 2 });
+  });
+
+  it("runs along the longer leg", () => {
+    expect(runOf(tab(100), tab(300))).toEqual({ axis: "x", dir: 1 });
+    expect(runOf(tab(300), tab(100))).toEqual({ axis: "x", dir: -1 });
+    expect(runOf(listRow(0), listRow(112))).toEqual({ axis: "y", dir: 1 });
+    expect(runOf(listRow(112), listRow(0))).toEqual({ axis: "y", dir: -1 });
   });
 
   it("stretches ahead on its way: the leading edge arrives first, the tail has barely moved", () => {
@@ -50,6 +59,18 @@ describe("tab drop", () => {
     expect(thinness({ ...right, width: right.width * 10 }, to)).toBe(0.6);
   });
 
+  it("stretches down a list the same way, keeping the row's width", () => {
+    const from = listRow(0);
+    const to = listRow(168);
+    const down = stretchBox(from, to);
+    expect(down.width).toBe(to.width);
+    expect(down.top).toBeCloseTo(from.top + (to.top - from.top) * 0.18);
+    expect(down.top + down.height).toBeGreaterThan(to.top + to.height);
+    const up = stretchBox(to, from);
+    expect(up.top).toBeLessThan(from.top);
+    expect(thinness(down, to)).toBeLessThan(1);
+  });
+
   it("draws the tail out into a thread: each bead rides its share of the tail's run", () => {
     const from = dropBox(tab(100), row);
     const to = dropBox(tab(300), row);
@@ -58,12 +79,12 @@ describe("tab drop", () => {
     expect(beads).toHaveLength(5);
     expect(beads[0]?.share).toBe(0);
     expect(beads[4]?.share).toBe(1);
-    const run = (to.left - from.left);
     for (const bead of beads) {
+      const [start, half, end] = bead.at;
       // all start merged in the old tail, then move in proportion to it
-      expect(bead.x[0] + bead.size / 2).toBeCloseTo(from.left + to.height * 0.5);
-      expect(bead.x[1] - bead.x[0]).toBeCloseTo((stretched.left - from.left) * bead.share);
-      expect(bead.x[2] - bead.x[0]).toBeCloseTo(run * bead.share);
+      expect(start.x + bead.size / 2).toBeCloseTo(from.left + to.height * 0.5);
+      expect(half.x - start.x).toBeCloseTo((stretched.left - from.left) * bead.share);
+      expect(end.x - start.x).toBeCloseTo((to.left - from.left) * bead.share);
       expect(bead.size).toBeGreaterThanOrEqual(to.height * 0.46 * 0.85);
       expect(bead.size).toBeLessThan(to.height * 0.6);
     }
@@ -95,9 +116,24 @@ describe("tab drop", () => {
     const to = dropBox(tab(100), row);
     const beads = threadBeads(from, stretchBox(from, to), to, 4, seeded(5));
     for (const bead of beads) {
-      expect(bead.x[0] + bead.size / 2).toBeCloseTo(from.left + from.width - to.height * 0.5);
-      expect(bead.x[2]).toBeLessThanOrEqual(bead.x[0]);
+      expect(bead.at[0].x + bead.size / 2).toBeCloseTo(from.left + from.width - to.height * 0.5);
+      expect(bead.at[2].x).toBeLessThanOrEqual(bead.at[0].x);
     }
     expect(beads.at(-1)!.home.x + beads.at(-1)!.size / 2).toBeLessThan(to.left + to.width);
+  });
+
+  it("threads down a list along y, with beads no bigger than asked, wandering across the row", () => {
+    const from = listRow(0);
+    const to = listRow(168);
+    const beads = threadBeads(from, stretchBox(from, to), to, 5, seeded(9), 20);
+    for (const bead of beads) {
+      expect(bead.size).toBeLessThanOrEqual(20);
+      expect(bead.at[0].y + bead.size / 2).toBeCloseTo(from.top + 56 * 0.5);
+      expect(bead.at[2].y - bead.at[0].y).toBeCloseTo((to.top - from.top) * bead.share);
+      // across: within the row, and no sag sideways
+      expect(bead.at[0].x).toBeGreaterThan(from.left);
+      expect(bead.at[0].x + bead.size).toBeLessThan(from.left + from.width);
+      expect(bead.at[2].x).toBe(bead.at[0].x);
+    }
   });
 });

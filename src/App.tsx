@@ -44,6 +44,7 @@ import { useT } from "./lib/i18n.ts";
 import { useScreenWakeLock } from "./lib/wakeLock.ts";
 import { watchDrawerSwipe } from "./lib/edgeSwipe.ts";
 import { Droplet } from "./components/Droplet.tsx";
+import { WaterDrop, WaterFilter } from "./components/WaterDrop.tsx";
 import { dropletAllows, endedTurn, showDroplet, trackTurn, type DropletKind } from "./lib/droplet.ts";
 import { playAlertSound, unlockAlertSound, type AlertSoundKind } from "./lib/alertSound.ts";
 
@@ -680,6 +681,7 @@ export function App() {
 
   return (
     <MachineContext.Provider value={selectedMachineId}><div className={`app${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+      {settings.waterDrops && <WaterFilter />}
       <header className="app-header">
         <button
           type="button"
@@ -740,6 +742,7 @@ export function App() {
               <span className="header-desktop-only">{t("Terminal")}</span>
               {!terminalAttach && <span className="pill pill-soon">{t("soon")}</span>}
             </button>
+            <WaterDrop items="button" scale={1.1} />
           </div>
         )}
         <div className="header-meta">
@@ -777,6 +780,7 @@ export function App() {
               <Lock />
             </button>
           )}
+          <WaterDrop items=".icon-button" scale={1.15} />
         </div>
       </header>
 

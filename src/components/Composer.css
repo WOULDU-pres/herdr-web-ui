@@ -727,3 +727,9 @@
   color: var(--text-dim);
   font-size: var(--fs-xs);
 }
+
+/* with water drops on (WaterDrop.tsx), the completions hold a drop on the row the keys picked, which
+   goes to the row under the pointer while the pointer is over the list: the drop is the highlight */
+:root[data-drops="on"] .composer-menu .menu-item:is(:hover, [aria-selected="true"]) {
+  background: transparent;
+}

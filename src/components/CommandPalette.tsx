@@ -12,6 +12,7 @@ import { AgentMark } from "./AgentMark.tsx";
 import { displayPaneTitle, StatusBadge } from "./Sidebar.tsx";
 import { placeLine } from "../lib/paneName.ts";
 import { useT } from "../lib/i18n.ts";
+import { WaterDrop } from "./WaterDrop.tsx";
 
 const RECENT_KEY = "herdr-web-ui:recent-panes";
 const RECENT_LIMIT = 8;
@@ -195,6 +196,7 @@ export function CommandPalette({ open, onClose, snapshot, selectedPaneId, view, 
             return <button key={action.id} id={`palette-item-${index}`} type="button" role="option" className="menu-item" aria-selected={activeIndex === index} onMouseEnter={() => setActiveIndex(index)} onClick={() => runAction(action)}><Icon /><span className="menu-item-main">{action.label}</span><ShortcutHint shortcutId={action.shortcut} /></button>;
           })}
           {itemCount === 0 && <p className="palette-empty" role="status">{t("No matching panes or actions")}</p>}
+          <WaterDrop items=".menu-item" follow="selected" scale={1.01} radius="var(--radius-md)" />
         </div>
       </section>
     </div>

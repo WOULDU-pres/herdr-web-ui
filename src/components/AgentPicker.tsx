@@ -3,6 +3,7 @@ import { ChevronDown, Terminal } from "lucide-react";
 
 import type { AgentKind } from "../../shared/protocol.ts";
 import { AgentMark } from "./AgentMark.tsx";
+import { WaterDrop } from "./WaterDrop.tsx";
 
 /** The shell entry is a program name like the agents beside it, so it stays in English. */
 const SHELL_LABEL = "Shell";
@@ -170,6 +171,7 @@ export const AgentPicker = forwardRef<HTMLButtonElement, AgentPickerProps>(funct
               <span className="menu-item-main">{option.label}</span>
             </div>
           ))}
+          <WaterDrop items=".menu-item" follow="selected" marked="[data-active]" scale={1.03} radius="var(--radius-md)" />
         </div>
       )}
     </div>

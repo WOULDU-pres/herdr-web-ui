@@ -134,3 +134,15 @@
 .files-dialog .dir-browser-list {
   max-height: min(60vh, calc(var(--control-h) * 14));
 }
+
+/* with water drops on (WaterDrop.tsx), the list holds a drop that runs between its folders and files:
+   the list is a stacking context of its own so the drop's layer sits under them, and the drop is
+   the hover and the keyboard's highlight */
+:root[data-drops="on"] .dir-browser-list {
+  position: relative;
+  isolation: isolate;
+}
+
+:root[data-drops="on"] .dir-browser-item:is(:hover, :focus-visible) {
+  background: transparent;
+}

@@ -56,14 +56,14 @@
   --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--border);
   --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.35);
 
-  /* the water drop under the pointer on the tab row (TabDrop.tsx): its filter paints these on
-     the liquid's shape. Mixed from the palette's strong text, so every dark palette gets its own;
+  /* water drops (Settings → Water drops; WaterDrop.tsx): their filter paints these on the
+     liquid's shape. Mixed from the palette's strong text, so every dark palette gets its own;
      the light block mixes them from its ink and its input white */
-  --tab-drop-body: color-mix(in srgb, var(--text-strong) 10%, transparent);
-  --tab-drop-edge: color-mix(in srgb, var(--text-strong) 12%, transparent);
-  --tab-drop-rim: color-mix(in srgb, var(--text-strong) 30%, transparent);
-  --tab-drop-light: var(--text-strong);
-  --tab-drop-shade: color-mix(in srgb, var(--bg) 75%, transparent);
+  --water-body: color-mix(in srgb, var(--text-strong) 10%, transparent);
+  --water-edge: color-mix(in srgb, var(--text-strong) 12%, transparent);
+  --water-rim: color-mix(in srgb, var(--text-strong) 30%, transparent);
+  --water-light: var(--text-strong);
+  --water-shade: color-mix(in srgb, var(--bg) 75%, transparent);
 
   /* terminal theme: mirrored verbatim in src/lib/settings.ts terminalTheme() */
   --term-bg: #181613;
@@ -132,7 +132,7 @@
   --dur-fast: 120ms;
   --dur-base: 180ms;
   --dur-pulse: 1600ms;
-  --dur-tab-drop: 520ms;
+  --dur-water: 520ms;
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
   --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
   /* the pulse jumps between its two looks: a smooth one has the browser draw a new frame at
@@ -141,10 +141,11 @@
   --ease-pulse: steps(2, jump-none);
 
   /* layers */
-  /* the tab drop and the tabs over it: over the chat and the terminal banners, under popovers */
+  --z-banner: 5;
+  /* the tab row's water drop and the tabs over it: over the chat and the terminal banners,
+     under popovers */
   --z-tab-drop: 6;
   --z-tab-row: 7;
-  --z-banner: 5;
   --z-popover: 10;
   --z-scrim: 15;
   --z-drawer: 20;
@@ -193,11 +194,11 @@
   --shadow-drawer: 0 0 40px rgba(40, 32, 22, 0.22);
   --shadow-pop: 0 16px 48px rgba(40, 32, 22, 0.16), 0 0 0 1px var(--border);
   --shadow-card: 0 4px 16px rgba(40, 32, 22, 0.07);
-  --tab-drop-body: color-mix(in srgb, var(--text-strong) 5%, transparent);
-  --tab-drop-edge: color-mix(in srgb, var(--text-strong) 20%, transparent);
-  --tab-drop-rim: var(--bg-input);
-  --tab-drop-light: var(--bg-input);
-  --tab-drop-shade: color-mix(in srgb, var(--text-strong) 18%, transparent);
+  --water-body: color-mix(in srgb, var(--text-strong) 5%, transparent);
+  --water-edge: color-mix(in srgb, var(--text-strong) 20%, transparent);
+  --water-rim: var(--bg-input);
+  --water-light: var(--bg-input);
+  --water-shade: color-mix(in srgb, var(--text-strong) 18%, transparent);
   --term-bg: #faf8f3;
   --term-fg: #2a251f;
   --term-cursor: #8c5000;
@@ -965,6 +966,25 @@ button {
 /* the chosen lens carries the selection color on its glyph, like the rail does in the list */
 .segmented > button[aria-pressed="true"] svg {
   color: var(--accent);
+}
+
+/* with water drops on (WaterDrop.tsx), every segmented control (the view switch, the settings) and
+   the header's buttons hold a drop: each is a stacking context of its own so the drop's layer sits
+   under its buttons. The drop is the hover; the chosen option keeps a fainter fill, so the drop
+   shows through it */
+:root[data-drops="on"] :is(.segmented, .header-meta) {
+  position: relative;
+  isolation: isolate;
+}
+
+:root[data-drops="on"] .segmented > button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--bg-hover) 55%, transparent);
+}
+
+@media (hover: hover) {
+  :root[data-drops="on"] .header-meta .icon-button:hover:not(:disabled) {
+    background: transparent;
+  }
 }
 
 /* keyboard key hint */

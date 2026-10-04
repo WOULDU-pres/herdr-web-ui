@@ -145,3 +145,9 @@
     height: var(--touch-target);
   }
 }
+
+/* with water drops on (WaterDrop.tsx), the drop sits on the keyboard/pointer row (data-active) and is
+   its highlight */
+:root[data-drops="on"] .agent-picker-menu .menu-item:is(:hover, [data-active]) {
+  background: transparent;
+}

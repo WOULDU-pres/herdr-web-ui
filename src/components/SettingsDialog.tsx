@@ -23,6 +23,7 @@ import { PhonePanel } from "./PhonePanel.tsx";
 import { PushTestControls } from "./PushTestControls.tsx";
 import { playAlertSound, unlockAlertSound } from "../lib/alertSound.ts";
 import { HerdrUpdateControls, UpdateControls } from "./UpdateControls.tsx";
+import { WaterDrop } from "./WaterDrop.tsx";
 
 export interface SettingsDialogProps {
   open: boolean;
@@ -228,6 +229,7 @@ export function SettingsDialog({ open, onClose, actions, updates, auth, onEnable
                     {t(theme === "dark" ? "Dark" : theme === "light" ? "Light" : "System")}
                   </button>
                 ))}
+                <WaterDrop items="button" scale={1.1} />
               </div>
             </div>
             <div className="settings-row">
@@ -238,6 +240,7 @@ export function SettingsDialog({ open, onClose, actions, updates, auth, onEnable
                     {t(palette === "report" ? "Dark report" : palette === "amber" ? "Amber" : palette === "catppuccin" ? "Catppuccin" : "Charcoal")}
                   </button>
                 ))}
+                <WaterDrop items="button" scale={1.1} />
               </div>
             </div>
             <div className="settings-row">
@@ -248,7 +251,12 @@ export function SettingsDialog({ open, onClose, actions, updates, auth, onEnable
                     {t(density === "compact" ? "Compact" : "Comfortable")}
                   </button>
                 ))}
+                <WaterDrop items="button" scale={1.1} />
               </div>
+            </div>
+            <div className="settings-row">
+              <div><span className="settings-label">{t("Water drops")}</span><span className="settings-description">{t("A drop of water follows the pointer over tabs, buttons and lists")}</span></div>
+              <Toggle label={t("Water drops")} checked={settings.waterDrops} onChange={(waterDrops) => update({ waterDrops })} />
             </div>
             <div className="settings-row">
               <div><span className="settings-label">{t("Language")}</span><span className="settings-description">{t("Follows the browser unless you choose one")}</span></div>
@@ -258,6 +266,7 @@ export function SettingsDialog({ open, onClose, actions, updates, auth, onEnable
                     {language === "system" ? t("System") : LANGUAGE_NAMES[language]}
                   </button>
                 ))}
+                <WaterDrop items="button" scale={1.1} />
               </div>
             </div>
             <div className="settings-row">
@@ -268,6 +277,7 @@ export function SettingsDialog({ open, onClose, actions, updates, auth, onEnable
                     {t(grouping === "workspace" ? "By workspace" : "By folder")}
                   </button>
                 ))}
+                <WaterDrop items="button" scale={1.1} />
               </div>
             </div>
             <div className="settings-row">
@@ -390,6 +400,7 @@ export function SettingsDialog({ open, onClose, actions, updates, auth, onEnable
                     {t(defaultView === "auto" ? "Auto" : defaultView === "chat" ? "Chat" : "Terminal")}
                   </button>
                 ))}
+                <WaterDrop items="button" scale={1.1} />
               </div>
             </div>
             <div className="settings-row">
@@ -426,6 +437,7 @@ export function SettingsDialog({ open, onClose, actions, updates, auth, onEnable
                     {t(alertDone === "off" ? "Off" : alertDone === "long" ? "Long turns" : "Every turn")}
                   </button>
                 ))}
+                <WaterDrop items="button" scale={1.1} />
               </div>
             </div>
             <div className="settings-row">
@@ -490,6 +502,7 @@ export function SettingsDialog({ open, onClose, actions, updates, auth, onEnable
                       {t(usageCount === "used" ? "Used" : "Remaining")}
                     </button>
                   ))}
+                  <WaterDrop items="button" scale={1.1} />
                 </div>
               </div>
             )}
@@ -502,6 +515,7 @@ export function SettingsDialog({ open, onClose, actions, updates, auth, onEnable
                       {t(usageGlance === "week" ? "Weekly" : "Session")}
                     </button>
                   ))}
+                  <WaterDrop items="button" scale={1.1} />
                 </div>
               </div>
             )}

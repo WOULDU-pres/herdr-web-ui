@@ -942,3 +942,25 @@
 .chat-abandoned { margin: var(--space-2) 0; }
 .chat-abandoned > summary { font-style: italic; }
 .chat-abandoned-note { margin: var(--space-2) 0 0; color: var(--text-dim); }
+
+/* with water drops on (WaterDrop.tsx), a work block holds a drop that runs between its heads: the
+   block is a stacking context of its own so the drop's layer sits under them, and the drop is the hover */
+:root[data-drops="on"] .work-block {
+  position: relative;
+  isolation: isolate;
+}
+
+:root[data-drops="on"] :is(.work-block-head, .work-row-head):hover {
+  background: transparent;
+}
+
+/* with water drops on, a turn's copy buttons hold a drop: the meta row is a stacking context of its
+   own so the drop's layer sits under them, and the drop is their hover */
+:root[data-drops="on"] .chat-turn-meta {
+  position: relative;
+  isolation: isolate;
+}
+
+:root[data-drops="on"] .chat-turn-meta :is(.chat-copy, .chat-meta-btn):hover {
+  background: transparent;
+}

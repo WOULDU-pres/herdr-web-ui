@@ -66,6 +66,8 @@ export const JA: Record<string, string> = {
   "Auto": "自動",
   "Show thinking": "思考を表示",
   "Include the agent's reasoning blocks": "エージェントの推論ブロックも表示します",
+  "Water drops": "水滴エフェクト",
+  "A drop of water follows the pointer over tabs, buttons and lists": "タブやボタン、リストの上で水滴がポインターを追いかけます",
   "Chat font size": "チャットのフォントサイズ",
   "Messages, code and prompt cards in the chat view": "チャット画面のメッセージ、コード、質問カード",
   "Decrease chat font size": "チャットの文字を小さく",

@@ -17,6 +17,7 @@ import { folderName, placeLine, shortPathTitle } from "../lib/paneName.ts";
 import { useT } from "../lib/i18n.ts";
 import { groupDirectories } from "../lib/directoryGroups.ts";
 import { useSettings, type SidebarGrouping } from "../lib/settings.ts";
+import { WaterDrop } from "./WaterDrop.tsx";
 
 const ERROR_NOTE_MS = 5000;
 
@@ -531,6 +532,7 @@ export function Sidebar({ snapshot, selectedPaneId, actions }: SidebarProps) {
         {inlineError && inlineError.workspaceId === undefined && (
           <p className="sidebar-inline-error" role="alert">{inlineError.message}</p>
         )}
+        <WaterDrop items=".pane-row, .directory-header" scale={1.02} radius="var(--radius-md)" spillX={4} />
       </nav>
       {menu && <RowMenu anchor={menu.anchor} title={menu.title} subtitle={menu.place} items={menuItems(menu)} onClose={closeMenu} />}
       {confirm && <ConfirmDialog title={confirm.title} body={confirm.body} confirmLabel={confirm.action ?? t("Close")} onConfirm={confirm.run} escalation={confirm.escalation} onClose={() => setConfirm(null)} />}

@@ -68,6 +68,8 @@ export const ZH: Record<string, string> = {
   "Auto": "自动",
   "Show thinking": "显示思考过程",
   "Include the agent's reasoning blocks": "一并显示 Agent 的推理块",
+  "Water drops": "水滴效果",
+  "A drop of water follows the pointer over tabs, buttons and lists": "在标签、按钮和列表上，水滴跟随指针移动",
   "Chat font size": "聊天字号",
   "Messages, code and prompt cards in the chat view": "聊天视图中的消息、代码和提问卡片",
   "Decrease chat font size": "减小聊天字号",

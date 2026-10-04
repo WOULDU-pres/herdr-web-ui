@@ -3,6 +3,8 @@ import { Check, Send } from "lucide-react";
 
 import "./PromptCard.css";
 
+import { WaterDrop } from "./WaterDrop.tsx";
+
 import { ApiError } from "../lib/api.ts";
 import { useMachineApi } from "../lib/machineContext.tsx";
 import type { InteractivePrompt, PromptAnswer } from "../../shared/protocol.ts";
@@ -129,6 +131,7 @@ export function PromptCard({ paneId, prompt, onPromptChanged, onAnswered, typedA
               </button>
             );
           })}
+          <WaterDrop items=".prompt-card-option" scale={1.02} radius="var(--radius-md)" />
         </div>
       )}
       {prompt.multi_select && (

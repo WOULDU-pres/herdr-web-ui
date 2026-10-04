@@ -29,3 +29,19 @@
     background: var(--bg-hover);
   }
 }
+
+/* with water drops on (WaterDrop.tsx), the list holds a drop that runs between its rows: the list is a
+   stacking context of its own so the drop's layer sits under them. The drop is the hover and the
+   keyboard's highlight; the selected row keeps a fainter fill, so the drop shows through it */
+:root[data-drops="on"] .needs-input .pane-list {
+  position: relative;
+  isolation: isolate;
+}
+
+:root[data-drops="on"] .needs-input-select:is(:hover, :focus-visible) {
+  background: transparent;
+}
+
+:root[data-drops="on"] .needs-input-item.is-selected .needs-input-select {
+  background: color-mix(in srgb, var(--bg-hover) 55%, transparent);
+}

@@ -137,3 +137,15 @@
 @media (max-width: 480px) {
   .palette-shortcut { display: none; }
 }
+
+/* with water drops on (WaterDrop.tsx), the results hold a drop that sits on the highlighted row, which
+   the keys and the pointer both move: the drop is the highlight. The list is a stacking context of
+   its own so the drop's layer sits under the rows */
+:root[data-drops="on"] .palette-results {
+  position: relative;
+  isolation: isolate;
+}
+
+:root[data-drops="on"] .palette-results .menu-item:is(:hover, [aria-selected="true"]) {
+  background: transparent;
+}

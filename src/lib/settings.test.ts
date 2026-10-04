@@ -10,6 +10,11 @@ it("keeps the screen wake lock off until this device explicitly enables it", () 
   expect(sanitizeSettings({}).keepScreenOn).toBe(false);
   expect(sanitizeSettings({ keepScreenOn: true }).keepScreenOn).toBe(true);
   expect(sanitizeSettings({ keepScreenOn: "true" }).keepScreenOn).toBe(false);
+  // the water drops are an opt-in look: off until chosen, and only a real boolean turns them on
+  expect(DEFAULT_SETTINGS.waterDrops).toBe(false);
+  expect(sanitizeSettings({}).waterDrops).toBe(false);
+  expect(sanitizeSettings({ waterDrops: true }).waterDrops).toBe(true);
+  expect(sanitizeSettings({ waterDrops: "on" }).waterDrops).toBe(false);
   // the terminal's wheel speed: one report per wheel event unless chosen, whole and bounded
   expect(sanitizeSettings({}).terminalWheelSpeed).toBe(1);
   expect(sanitizeSettings({ terminalWheelSpeed: 3 }).terminalWheelSpeed).toBe(3);

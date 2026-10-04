@@ -18,6 +18,7 @@ import { AgentPicker, rememberAgent, rememberedAgent } from "./AgentPicker.tsx";
 import { useMachineApi } from "../lib/machineContext.tsx";
 import { useT } from "../lib/i18n.ts";
 import { suggestWorktreeBranch, worktreeLabel } from "../lib/worktreeName.ts";
+import { WaterDrop } from "./WaterDrop.tsx";
 
 export type WorktreeDialogMode = "create" | "open";
 
@@ -201,6 +202,7 @@ export function WorktreeDialog({ mode, workspace, onClose, onOpened }: Props) {
                   </button>
                 </li>
               ))}
+              <WaterDrop as="li" items=".worktree-row" scale={1.02} radius="var(--radius-md)" />
             </ul>
           )}
           {pending && <p className="field-hint" role="status">{pending}</p>}

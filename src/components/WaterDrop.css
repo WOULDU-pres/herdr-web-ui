@@ -1,0 +1,52 @@
+/* Water drops (WaterDrop.tsx, TabDrop.tsx, waterDropMotion.ts). The drop and its beads are plain
+   shapes; the liquid's filter makes them one water and paints it with the --water-* colours. A
+   capsule unless a group gives it corners, in every palette: it is water. */
+
+.water-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.water-body { flood-color: var(--water-body); }
+.water-edge { flood-color: var(--water-edge); }
+.water-rim { flood-color: var(--water-rim); }
+.water-shade { flood-color: var(--water-shade); }
+.water-light { lighting-color: var(--water-light); }
+
+/* a group's layer: inside its container (made a stacking context of its own by the component's
+   CSS), under the items */
+.water-layer {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.water-liquid {
+  position: absolute;
+  filter: url(#water-drop);
+}
+
+.water-drop,
+.water-bead {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: var(--text-strong);
+}
+
+.water-drop {
+  width: 0;
+  height: 0;
+  border-radius: var(--radius-pill);
+  opacity: 0;
+}
+
+.water-drop.is-on {
+  opacity: 1;
+}
+
+.water-bead {
+  border-radius: 50%;
+}

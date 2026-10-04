@@ -51,6 +51,8 @@ export interface Settings {
   showThinking: boolean;
   /** request a screen wake lock while a pane is open in this visible tab */
   keepScreenOn: boolean;
+  /** a drop of water follows the pointer over what can be picked (components/TabDrop.tsx, WaterDrop.tsx); written as data-drops */
+  waterDrops: boolean;
   /** UI language; `system` follows the browser (src/lib/i18n.ts) */
   language: LanguageSetting;
   /** alerts on this device at all: the bell turns them off (push subscription dropped) and on */
@@ -101,6 +103,7 @@ export const DEFAULT_SETTINGS: Settings = {
   enterSends: true,
   showThinking: false,
   keepScreenOn: false,
+  waterDrops: false,
   language: "system",
   alertsOn: true,
   alertInput: true,
@@ -188,6 +191,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     enterSends: typeof record["enterSends"] === "boolean" ? record["enterSends"] : DEFAULT_SETTINGS.enterSends,
     showThinking: typeof record["showThinking"] === "boolean" ? record["showThinking"] : DEFAULT_SETTINGS.showThinking,
     keepScreenOn: typeof record["keepScreenOn"] === "boolean" ? record["keepScreenOn"] : DEFAULT_SETTINGS.keepScreenOn,
+    waterDrops: typeof record["waterDrops"] === "boolean" ? record["waterDrops"] : DEFAULT_SETTINGS.waterDrops,
     language: LANGUAGE_SETTINGS.includes(record["language"] as LanguageSetting) ? record["language"] as LanguageSetting : DEFAULT_SETTINGS.language,
     alertsOn: typeof record["alertsOn"] === "boolean" ? record["alertsOn"] : DEFAULT_SETTINGS.alertsOn,
     alertInput: typeof record["alertInput"] === "boolean" ? record["alertInput"] : DEFAULT_SETTINGS.alertInput,
@@ -276,6 +280,7 @@ function applyToDocument(settings: Settings, resolved: ResolvedTheme, language: 
   root.dataset["theme"] = resolved;
   root.dataset["density"] = settings.density;
   root.dataset["palette"] = settings.palette;
+  root.dataset["drops"] = settings.waterDrops ? "on" : "off";
   // ChatView.css scales its type tokens by this: the chosen size over the density's
   root.style.setProperty("--chat-scale", String(chatFontSize(settings) / CHAT_BASE_FONT[settings.density]));
   // ChatView.css sets the transcript's prose in this, and falls back to --font-ui without it

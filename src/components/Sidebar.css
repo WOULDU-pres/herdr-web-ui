@@ -461,3 +461,34 @@
     transition: none;
   }
 }
+
+/* with water drops on (WaterDrop.tsx), the list holds a drop that runs between its rows: the list is
+   a stacking context of its own so the drop's layer sits under the rows. The drop is the hover;
+   the selected row keeps a fainter fill, so the drop shows through it */
+:root[data-drops="on"] .sidebar-list {
+  position: relative;
+  isolation: isolate;
+}
+
+:root[data-drops="on"] .pane-item:is(:hover, :focus-within):not(.is-selected) .pane-row,
+:root[data-drops="on"] .directory-header:is(:hover, :focus-visible) {
+  background: transparent;
+}
+
+:root[data-drops="on"] .pane-item.is-selected .pane-row {
+  background: color-mix(in srgb, var(--bg-hover) 55%, transparent);
+}
+
+/* with water drops on, the footer (positioned already) holds a drop that runs between Install app,
+   Settings and the usage strip: a stacking context of its own (the usage popover it opens stays
+   inside the sidebar's width), and the drop is their hover */
+:root[data-drops="on"] .sidebar-footer {
+  isolation: isolate;
+}
+
+@media (hover: hover) {
+  :root[data-drops="on"] .sidebar-footer .sidebar-footer-action:hover:not(:disabled),
+  :root[data-drops="on"] .sidebar-footer .usage-strip:hover:not([aria-expanded="true"]) {
+    background: transparent;
+  }
+}

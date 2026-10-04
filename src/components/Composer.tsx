@@ -36,6 +36,7 @@ import { AgentMark } from "./AgentMark.tsx";
 import { BackgroundTasks } from "./BackgroundTasks.tsx";
 import { MicButton, VoiceRecordingPill, useDictation } from "./VoiceInput.tsx";
 import { useT } from "../lib/i18n.ts";
+import { WaterDrop } from "./WaterDrop.tsx";
 
 export interface ComposerProps {
   connected: boolean;
@@ -766,6 +767,7 @@ export function Composer({
                 ))}
               </div>
             )}
+            <WaterDrop items=".menu-item" follow="selected" scale={1.02} radius="var(--radius-md)" />
           </div>
         )}
 

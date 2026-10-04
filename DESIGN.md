@@ -144,6 +144,8 @@ CSS tokens verbatim for each resolved theme and palette (`settings.test.ts` chec
 ### Settings
 - `theme`: `dark`, `light`, or `system`; default `dark`.
 - `palette`: `amber`, `report`, `charcoal` or `catppuccin`; default `amber`.
+- `waterDrops`: off by default; written as `data-drops` (`on` / `off`) on `<html>`. Off, the app looks
+  as it does without the setting.
 - `density`: `comfortable` or `compact`; default `comfortable`.
 - Terminal font size is independent: default `13px`, clamped to `10–22px`.
 - Terminal and chat font families are comma-separated lists, default empty. They go in front of the
@@ -210,8 +212,8 @@ Comfortable values are `:root`; the final column is the complete compact overrid
 | `--ring` | `2px solid var(--accent)` | Global `:focus-visible` outline |
 | `--ring-offset` | `2px` | Outline offset |
 | `--z-banner` | `5` | Terminal banners |
-| `--z-tab-drop` | `6` | Tab drop layer, over the header, the chat and the terminal banners |
-| `--z-tab-row` | `7` | Tabs and the `+`, over the tab drop |
+| `--z-tab-drop` | `6` | The tab row's water drop layer, over the header, the chat and the terminal banners |
+| `--z-tab-row` | `7` | Tabs and the `+`, over the tab row's water drop (only while water drops are on) |
 | `--z-popover` | `10` | Composer completions |
 | `--z-scrim` | `15` | Mobile drawer scrim |
 | `--z-drawer` | `20` | Mobile drawer |
@@ -233,19 +235,19 @@ One set for both themes: the card is island black wherever it shows.
 | `--droplet-ring` | `rgba(255, 255, 255, 0.1)` | Card hairline |
 | `--droplet-shadow` | `rgba(0, 0, 0, 0.35)` | Drop shadow under the liquid |
 
-### Tab drop
+### Water drops
 
-The water drop under the pointer on the tab row (`TabDrop.tsx`); its SVG filter paints these on
-the liquid's shape. They are mixed from the palette's own colours, so the opt-in palettes need no
-values of their own.
+The drop of water under the pointer (Settings → Water drops; `WaterDrop.tsx`, `TabDrop.tsx`); its
+SVG filter paints these on the liquid's shape. They are mixed from the palette's own colours, so
+the opt-in palettes need no values of their own.
 
 | Token | Dark | Light | Usage |
 |-------|------|-------|-------|
-| `--tab-drop-body` | `color-mix(in srgb, var(--text-strong) 10%, transparent)` | `color-mix(in srgb, var(--text-strong) 5%, transparent)` | The water's body |
-| `--tab-drop-edge` | `color-mix(in srgb, var(--text-strong) 12%, transparent)` | `color-mix(in srgb, var(--text-strong) 20%, transparent)` | 1px edge |
-| `--tab-drop-rim` | `color-mix(in srgb, var(--text-strong) 30%, transparent)` | `var(--bg-input)` | Bright crescent along the bottom |
-| `--tab-drop-light` | `var(--text-strong)` | `var(--bg-input)` | Light on the curved surface |
-| `--tab-drop-shade` | `color-mix(in srgb, var(--bg) 75%, transparent)` | `color-mix(in srgb, var(--text-strong) 18%, transparent)` | Shadow under the water |
+| `--water-body` | `color-mix(in srgb, var(--text-strong) 10%, transparent)` | `color-mix(in srgb, var(--text-strong) 5%, transparent)` | The water's body |
+| `--water-edge` | `color-mix(in srgb, var(--text-strong) 12%, transparent)` | `color-mix(in srgb, var(--text-strong) 20%, transparent)` | 1px edge |
+| `--water-rim` | `color-mix(in srgb, var(--text-strong) 30%, transparent)` | `var(--bg-input)` | Bright crescent along the bottom |
+| `--water-light` | `var(--text-strong)` | `var(--bg-input)` | Light on the curved surface |
+| `--water-shade` | `color-mix(in srgb, var(--bg) 75%, transparent)` | `color-mix(in srgb, var(--text-strong) 18%, transparent)` | Shadow under the water |
 
 ### Shell
 - `.app` is a full-viewport column: `.app-header` over `.app-body`; the body is sidebar plus
@@ -432,20 +434,40 @@ values of their own.
 - The underline runs under the whole tab (`.tab-strip-item.is-active`), its `x` included. A tab
   herdr names itself reads **Tab n** by its place in the row: herdr relabels it when a tab
   before it closes.
-- A water drop sits under the tab the pointer or the keyboard focus is on (`TabDrop.tsx`): 1.25
-  times the tab, centred on it, spilling past the row onto the header and the pane, in a layer
-  (`--z-tab-drop`) under the tabs and the `+` (`--z-tab-row`), so the names stay on top. It stays
-  inside the row's ends and short of the `+`. It wells up on the first tab; to the next one its
-  leading edge runs ahead and the drop thins, then the tail snaps after it and draws out a thread
-  of 4-5 beads that breaks into pearls: the front one runs back into the drop, the rest fall away
-  and shrink to nothing. When the pointer leaves the row the drop and any beads shrink away. A
-  tab being renamed gets none, and neither does a touch. The drop and the beads are plain shapes;
-  an SVG filter blurs them together and cuts the blur back to a hard edge (so a bead pulling away
-  draws a neck that thins and snaps), then paints the `--tab-drop-*` colours: body, edge, a
-  bright crescent along the bottom, light from the upper left and a shadow.
+- With water drops on (see Water drops below), the tab row's drop is the one that leaves its
+  group (`TabDrop.tsx`): 1.25 times the tab, centred on it, spilling past the row onto the header
+  and the pane, in a window-wide layer (`--z-tab-drop`) under the tabs and the `+` (`--z-tab-row`),
+  so the names stay on top. It stays inside the row's ends and short of the `+`. A tab being
+  renamed gets none.
 - `--control-h` tall on a hairline over `--bg-panel`, scrolling sideways without a scrollbar;
   touch grows the buttons to `--touch-target`, and puts the pane picker beside its tab's name
   instead of pulling it over the name's padding. The same strip on a phone.
+
+### Water drops (`WaterDrop.tsx`)
+- Opt-in (Settings → Appearance → **Water drops**, off by default). A drop of water follows the
+  pointer, and the keyboard focus when it shows, over what can be picked: the tab row, the
+  header's buttons and every segmented control, the sidebar's rows, PC headers, Needs you and
+  footer, the row menu, the command palette, the composer's completions, the agent picker, the
+  folder, worktree and prompt-card lists, a work block's heads, a turn's copy buttons and the file
+  viewer's buttons. Touch gets none: a tap would leave it behind.
+- One drop per group, inside the group's container, under its items: the container is made a
+  stacking context of its own and the layer sits at `z-index: -1` in it, so it works inside a
+  sticky header, a portaled menu or a modal alike and the labels stay on top. The tab row's drop
+  is the exception above. Within a group it runs from item to item; a new group gets a new drop.
+- It wells up on its first item; to the next its leading edge runs ahead and it thins along the
+  run, then the tail snaps after it and draws out a thread of 4-5 beads that breaks into pearls:
+  the front one runs back into the drop, the rest fall away and shrink to nothing. When the pointer
+  leaves the group the drop and any beads shrink away where they are.
+- A list whose highlight follows the keys while the focus stays in a field (the command palette,
+  the composer's completions, the agent picker) puts the drop on the highlighted item instead, and
+  the pointer takes it to the item it is over until it leaves the list.
+- The drop is the hover: a group's hover fill is dropped while water drops are on, and a chosen
+  item keeps a fainter fill (`--bg-hover` at 55%) the drop shows through.
+- A capsule over buttons and tabs, the group's `--radius-*` over rows and menu items, in every
+  palette. The drop and the beads are plain shapes; one SVG filter (`WaterFilter`) blurs them
+  together and cuts the blur back to a hard edge (so a bead pulling away draws a neck that thins
+  and snaps), then paints the `--water-*` colours: body, edge, a bright crescent along the bottom,
+  light from the upper left and a shadow.
 
 ### Worktree dialog (`.worktree-modal`)
 - From a workspace row's menu, as herdr's prefix+shift+g: **New worktree** asks for the branch
@@ -597,7 +619,7 @@ values of their own.
 | Micro | `--dur-fast` | `120ms` | Hover, active, toggle and control state |
 | Standard | `--dur-base` | `180ms` | Drawer slide; reserved dialog timing token |
 | Pulse | `--dur-pulse` | `1600ms` | Working and reconnecting dots (trough opacity 0.35; text never pulses) |
-| Tab drop | `--dur-tab-drop` | `520ms` | The tab drop's run to the next tab and its welling up; its thread's beads live 1.55-1.7 times it |
+| Water drop | `--dur-water` | `520ms` | A water drop's run to the next item and its welling up; its thread's beads live 1.55-1.7 times it |
 | Easing | `--ease-out` | `cubic-bezier(0.2, 0, 0, 1)` | Finite transitions |
 | Pulse easing | `--ease-pulse` | `steps(2, jump-none)` | Endless working and reconnecting dots; avoids drawing every display refresh |
 | Spring easing | `--ease-spring` | `cubic-bezier(0.32, 0.72, 0, 1)` | Voice recording pill enter (180ms, scale 0.96->1 + opacity, from the mic button) and exit (120ms) |
@@ -609,12 +631,13 @@ values of their own.
 - The voice recording waveform is the one surface allowed to draw every frame: only while
   recording, driven by the live microphone level, transform-only (`scaleY` on 7 bars). The pill is
   a state change, not a dialog, so the snap rule above does not apply to it.
-- The tab drop moves only while the pointer or the keyboard focus moves along the tab row, and
-  draws every frame only while it runs (one `--dur-tab-drop`, its beads under twice that). Its
-  liquid filter covers the row and a margin around it, not the window.
+- Water drops are opt-in and move only while the pointer or the keyboard highlight moves within a
+  group; they draw every frame only while one runs (one `--dur-water`, its beads under twice
+  that). The liquid filter covers only that run (where the drop is, where it goes, the beads still
+  out, and a margin), cut to what is on screen, never the group or the window.
 - `prefers-reduced-motion: reduce` removes pulses, drawer/control transitions, smooth chat scrolling
-  and settings toggle motion. State remains legible without animation. The tab drop then jumps
-  from tab to tab and draws out no beads.
+  and settings toggle motion. State remains legible without animation. Water drops then jump
+  from item to item and draw out no beads.
 - Under reduced motion the voice pill swaps its bars for one level bar updated at 4 Hz and drops
   the ring and the morph; the **Recording** label and the timer stay.
 

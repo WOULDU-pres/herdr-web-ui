@@ -317,3 +317,15 @@
     padding: var(--space-3);
   }
 }
+
+/* with water drops on (WaterDrop.tsx), the options hold a drop that runs between them: the list is a
+   stacking context of its own so the drop's layer sits under the options, which drop their resting
+   fill so the drop shows through; a chosen or typed option keeps its accent tint */
+:root[data-drops="on"] .prompt-card-options {
+  position: relative;
+  isolation: isolate;
+}
+
+:root[data-drops="on"] .prompt-card-option:not(.is-checked, .is-typed) {
+  background: transparent;
+}

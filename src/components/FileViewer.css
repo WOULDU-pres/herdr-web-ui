@@ -165,3 +165,16 @@
   text-align: left;
   overflow-wrap: anywhere;
 }
+
+/* with water drops on (WaterDrop.tsx), the header's buttons hold a drop: the header is a stacking
+   context of its own so the drop's layer sits under them, and the drop is their hover */
+:root[data-drops="on"] .file-viewer-header {
+  position: relative;
+  isolation: isolate;
+}
+
+@media (hover: hover) {
+  :root[data-drops="on"] .file-viewer-header .icon-button:hover:not(:disabled) {
+    background: transparent;
+  }
+}

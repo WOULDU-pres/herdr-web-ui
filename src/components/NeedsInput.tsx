@@ -6,6 +6,8 @@ import { AgentMark } from "./AgentMark.tsx";
 import { displayPaneTitle, StatusBadge } from "./Sidebar.tsx";
 import "./NeedsInput.css";
 
+import { WaterDrop } from "./WaterDrop.tsx";
+
 export function NeedsInput({ machines, selectedMachineId, selectedPaneId, onSelect }: {
   machines: Machine[];
   selectedMachineId: string;
@@ -31,6 +33,7 @@ export function NeedsInput({ machines, selectedMachineId, selectedPaneId, onSele
           </button>
         </li>;
       })}
+      <WaterDrop as="li" items=".needs-input-select" scale={1.02} radius="var(--radius-md)" />
     </ul>
     </section>}
   </>;

@@ -123,3 +123,9 @@
   margin-top: var(--space-2);
   font-size: var(--fs-md);
 }
+
+/* with water drops on (WaterDrop.tsx), the menu (a layer of its own already) holds a drop that runs
+   between its items, under the pointer and the keyboard focus: the drop is their highlight */
+:root[data-drops="on"] .row-menu .menu-item:is(:hover, :focus-visible) {
+  background: transparent;
+}
