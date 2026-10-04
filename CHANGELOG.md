@@ -8,6 +8,8 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 ## [Unreleased]
 
 ### Fixed
+- In the terminal on macOS, Cmd+Left and Cmd+Right move to the beginning and end of the
+  input line, using the same terminal keys as Ctrl+A and Ctrl+E.
 - Switching to another pane no longer shows the previous pane's chat for a moment before the
   new one loads.
   ([#422](https://github.com/devswha/herdr-web-ui/pull/422) by @Haeminway1)
