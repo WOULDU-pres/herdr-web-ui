@@ -7,6 +7,10 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 
 ## [Unreleased]
 
+### Added
+- A lilac palette in Settings → Appearance → Colors: one quiet lavender with indigo ink and accent
+  in light, and the same hue at night in dark.
+
 ### Fixed
 - Switching to another pane no longer shows the previous pane's chat for a moment before the
   new one loads.
