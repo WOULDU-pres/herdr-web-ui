@@ -1,0 +1,43 @@
+bun test v1.4.2 (744846f84)
+
+server/take-over.contract.test.ts:
+84 |     const terminalId = snapshot.panes.find((p) => p.pane_id === f.paneId)!.terminal_id;
+85 |     const other = new PtySession({ command: realHerdr, args: ["terminal", "attach", terminalId, "--takeover"],
+86 |       cols: 100, rows: 30, env: { HERDR_SOCKET_PATH: process.env.HERDR_SOCKET! }, onData() {}, onExit() {} });
+87 |     cleanups.push(async () => { other.kill(); await other.exited; });
+88 |     await until(() => f.starts().length >= 3, "displaced bridge retries");
+89 |     expect(f.starts().slice(2).map((e) => e.args.includes("--takeover"))).toEqual([false]);
+                                                                               ^
+error: expect(received).toEqual(expected)
+
+  [
+-   false,
++   true,
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (<checkout>/server/take-over.contract.test.ts:89:75)
+(fail) explicit take-over intent > consumes a click when the running ordinary retry succeeds, before later displacement [1786.99ms]
+ 98 |     await f.barrier();
+ 99 |     f.send({ type: "take-over", pane_id: f.paneId });
+100 |     await until(() => f.frames.some((m) => m.type === "attach-resumed"), "clicked attach succeeds");
+101 |     const deadline = Date.now() + 700;
+102 |     await until(() => {
+103 |       expect(f.starts()).toHaveLength(6);
+                               ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 6
+Received length: 7
+
+      at <anonymous> (<checkout>/server/take-over.contract.test.ts:103:26)
+      at until (<checkout>/server/take-over.contract.test.ts:16:11)
+      at async <anonymous> (<checkout>/server/take-over.contract.test.ts:102:11)
+(fail) explicit take-over intent > cancels a read-race backoff before a click starts the next attach [2033.44ms]
+
+ 0 pass
+ 2 fail
+ 23 expect() calls
+Ran 2 tests across 1 file. [3.97s]

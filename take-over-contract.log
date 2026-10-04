@@ -1,0 +1,13 @@
+bun test v1.4.2 (744846f84)
+
+server/take-over.contract.test.ts:
+(pass) explicit take-over intent > consumes a click when the running ordinary retry succeeds, before later displacement [754.20ms]
+(pass) explicit take-over intent > cancels a read-race backoff before a click starts the next attach [1843.37ms]
+(pass) explicit take-over intent > keeps an explicit request through a read race and coalesces repeated clicks [619.38ms]
+(pass) explicit take-over intent > cancels a requested takeover when its last client detaches during an attempt [476.89ms]
+(pass) explicit take-over intent > ends a failed attempt without starting a pending click during its terminal lookup, preserving pane text [639.15ms]
+
+ 5 pass
+ 0 fail
+ 129 expect() calls
+Ran 5 tests across 1 file. [4.49s]
