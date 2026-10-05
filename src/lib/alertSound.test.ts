@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { CHIME_LOCK, CHIME_NOTES, playAlertSound, previewAlertSound, unlockAlertSound } from "./alertSound.ts";
+import { CHIME_NOTES, playAlertSound, previewAlertSound, unlockAlertSound } from "./alertSound.ts";
 
 /** A stand-in AudioContext that starts suspended, as a page's does before any tap or key. */
 const started: number[] = [];
@@ -96,6 +96,8 @@ describe("alert sound", () => {
 });
 
 describe("one chime at a time", () => {
+  // a running context of its own, so the suite also runs when it is the only one picked
+  beforeAll(async () => { await unlockAlertSound(); });
   beforeEach(() => { quiet(); });
 
   it("chimes once for panes that finish together", () => {
@@ -139,83 +141,5 @@ describe("one chime at a time", () => {
     previewAlertSound();
     expect(started).toEqual([...CHIME_NOTES.blocked, ...CHIME_NOTES.done]);
     expect(startedAt[2]).toBeCloseTo(now + 10 + LENGTH);
-  });
-});
-
-describe("open tabs take turns", () => {
-  /** navigator.locks with one lock: `other` stands for another tab of the app holding it. */
-  const lock = { held: false, other: false, refuse: false };
-  const navigator = globalThis.navigator as unknown as Record<string, unknown>;
-  beforeAll(() => Object.defineProperty(navigator, "locks", {
-    configurable: true,
-    value: {
-      async request(name: string, options: { ifAvailable?: boolean }, callback: (lock: unknown) => Promise<unknown>) {
-        expect(name).toBe(CHIME_LOCK);
-        expect(options.ifAvailable).toBe(true);
-        await Promise.resolve();
-        if (lock.refuse) throw new Error("SecurityError");
-        if (lock.held || lock.other) return callback(null);
-        lock.held = true;
-        try { return await callback({ name }); } finally { lock.held = false; }
-      },
-    },
-  }));
-  afterAll(() => { delete navigator["locks"]; });
-  beforeEach(() => { quiet(); lock.other = false; lock.refuse = false; });
-
-  /** Until the turn is given back, polling up to a deadline. */
-  async function released(): Promise<void> {
-    const deadline = performance.now() + 2000;
-    while (lock.held && performance.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(lock.held).toBe(false);
-  }
-
-  it("chimes in the tab that takes the turn, as a tab alone would", async () => {
-    playAlertSound("done");
-    playAlertSound("blocked");
-    playAlertSound("done");
-    expect(started).toEqual([]);
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(lock.held).toBe(true);
-    expect(started).toEqual([...CHIME_NOTES.done, ...CHIME_NOTES.blocked]);
-    // alerts while it holds the turn are told the same way
-    playAlertSound("done");
-    expect(started).toEqual([...CHIME_NOTES.done, ...CHIME_NOTES.blocked]);
-    await released();
-  });
-
-  it("stays quiet while another tab chimes", async () => {
-    lock.other = true;
-    playAlertSound("blocked");
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(started).toEqual([]);
-  });
-
-  it("gives the turn back after its chime, also when the context's clock stands still", async () => {
-    const before = performance.now();
-    playAlertSound("blocked");
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(lock.held).toBe(true);
-    await released();
-    expect(performance.now() - before).toBeGreaterThanOrEqual(LENGTH * 1000 - 5);
-  });
-
-  it("previews the chime in Settings while another tab chimes", () => {
-    lock.other = true;
-    previewAlertSound();
-    expect(started).toEqual([...CHIME_NOTES.done]);
-  });
-
-  it("chimes alone when the browser refuses the lock", async () => {
-    lock.refuse = true;
-    playAlertSound("done");
-    playAlertSound("blocked");
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(started).toEqual([...CHIME_NOTES.done, ...CHIME_NOTES.blocked]);
   });
 });

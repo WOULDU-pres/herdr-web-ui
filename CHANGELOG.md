@@ -8,9 +8,9 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 ## [Unreleased]
 
 ### Fixed
-- The alert sound chimes once for alerts that come together, from several panes at once or in
-  more than one open tab of the app, instead of sounding over itself. A pane that needs input
-  right after one that finished still chimes, once the first chime ends.
+- The alert sound chimes once for alerts that come together from several panes, instead of
+  sounding over itself. A pane that needs input right after one that finished still chimes,
+  once the first chime ends.
   ([#439](https://github.com/devswha/herdr-web-ui/pull/439) by @WOULDU-pres)
 - Attaching a file over 8 MB says so at once, with its size and the limit, instead of uploading
   it first and answering `/api/pane/image failed (413)`. Past about 96 MB that message gave no

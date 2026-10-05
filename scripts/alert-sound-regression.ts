@@ -3,13 +3,12 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Browser, Page } from "playwright-core";
-import { CHIME_LOCK } from "../src/lib/alertSound.ts";
 import { herdrRpc, workspaceClose, workspaceCreate } from "../server/herdr/client.ts";
 
 /**
  * The alert sound: real herdr status changes make the open tab chime, once a tap let the page
- * play audio, and never for the pane already open. Alerts that come together, in one tab or in
- * two tabs of the app, chime once. The page's AudioContext is a recorder that starts suspended
+ * play audio, and never for the pane already open. Alerts that come together in
+ * a tab chime once. The page's AudioContext is a recorder that starts suspended
  * like a real one, so what would have sounded is the notes it was asked for.
  */
 export async function checkAlertSound(browser: Browser, origin: string): Promise<void> {
@@ -63,10 +62,6 @@ export async function checkAlertSound(browser: Browser, origin: string): Promise
     const chimes = (tab: Page = page) => tab.evaluate(() => [...(window as unknown as { chimes: number[] }).chimes]);
     // the app must have seen the pane work before it waits: a wait first seen is no news
     const seen = (pane: string, status: string, tab: Page = page) => tab.locator(`.pane-item:has(.pane-select[title^="${pane} —"]) [data-status="${status}"]`).first().waitFor({ state: "attached" });
-    // Once a tab shows the wait, its alert already asked for the turn to chime (lib/alertSound.ts).
-    // A request that waits for the lock is granted after every earlier one, and after the chime
-    // that holds it ended: what the tab chimed for the alert is in by then.
-    const settled = (tab: Page) => tab.evaluate((lock) => navigator.locks.request(lock, async () => {}), CHIME_LOCK);
     // a tab's last chime ended: an alert after it is not told by it
     const quiet = (tab: Page) => tab.waitForFunction(() => performance.now() / 1000 >= (window as unknown as { chimeEnd: number }).chimeEnd);
     // The card for a waiting pane leaves by itself after a few seconds, so nothing is awaited
@@ -115,7 +110,7 @@ export async function checkAlertSound(browser: Browser, origin: string): Promise
 
     // two panes start waiting at the same moment: one chime tells both
     await quiet(page);
-    let before = (await chimes()).length;
+    const before = (await chimes()).length;
     await report(openPane, "idle");
     for (const pane of [openPane, thirdPane]) {
       await report(pane, "working");
@@ -123,30 +118,13 @@ export async function checkAlertSound(browser: Browser, origin: string): Promise
     }
     await Promise.all([report(openPane, "blocked"), report(thirdPane, "blocked")]);
     for (const pane of [openPane, thirdPane]) await seen(pane, "blocked");
-    await settled(page);
+    // the chime for the two is asked for, and then it has ended: a second one, for the other
+    // pane, would have been asked for while the first still sounded
+    await page.waitForFunction((count) => (window as unknown as { chimes: number[] }).chimes.length >= count + 2, before);
+    await quiet(page);
     assert.deepEqual((await chimes()).slice(before), [660, 880], "one chime for two panes that wait together");
     console.log("PASS two panes that wait together chime once");
 
-    // a second tab of the app hears the same alert: only one of the two chimes
-    const second = await context.newPage();
-    second.on("pageerror", (error) => errors.push(error.message));
-    await second.goto(`${origin}/?pane=${encodeURIComponent(otherPane)}`);
-    await second.locator(".conn-live").waitFor();
-    // a key lets the second tab play audio too
-    await second.keyboard.press("Shift");
-    before = (await chimes()).length;
-    await report(thirdPane, "idle");
-    await report(thirdPane, "working");
-    await seen(thirdPane, "working");
-    await seen(thirdPane, "working", second);
-    await quiet(page);
-    await report(thirdPane, "blocked");
-    await seen(thirdPane, "blocked");
-    await seen(thirdPane, "blocked", second);
-    await settled(page);
-    await settled(second);
-    assert.deepEqual([...(await chimes()).slice(before), ...await chimes(second)], [660, 880], "one chime across two tabs");
-    console.log("PASS two open tabs chime once for the same alert");
     assert.deepEqual(errors, []);
   } finally {
     await context.close();
