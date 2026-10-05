@@ -12,6 +12,10 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
   sounding over itself. A pane that needs input right after one that finished still chimes,
   once the first chime ends.
   ([#439](https://github.com/devswha/herdr-web-ui/pull/439) by @WOULDU-pres)
+- The DAG viewer pane omo-herdr-dag opens beside an OmO pane no longer appears in the
+  sidebar or the tab strip: an OmO workspace with its viewer shows as a single pane, as it does
+  without one. The viewer can still be opened from the command palette.
+  ([#447](https://github.com/devswha/herdr-web-ui/pull/447) by @nahwan-kim)
 - Attaching a file over 8 MB says so at once, with its size and the limit, instead of uploading
   it first and answering `/api/pane/image failed (413)`. Past about 96 MB that message gave no
   reason at all.
