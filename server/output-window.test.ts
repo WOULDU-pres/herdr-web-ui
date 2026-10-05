@@ -58,10 +58,11 @@ describe("terminal output credit", () => {
     replay.append("x".repeat(40));
     expect(replay.text()).toBe("\x1b[?1049h\x1b[>4;2m" + "x".repeat(16));
     // other key modifier resources are not it
-    replay.append("\x1b[>1;2m\x1b[>41m" + "y".repeat(40));
+    replay.append("\x1b[>1;2m\x1b[>41m\x1b[>0m" + "y".repeat(40));
     expect(replay.text()).toBe("\x1b[?1049h\x1b[>4;2m" + "y".repeat(16));
     // herdr turns it off as CSI > 4 ; 0 m; a program may also write CSI > 4 m or CSI > 4 n
-    for (const off of ["\x1b[>4;0m", "\x1b[>4m", "\x1b[>4n"]) {
+    // and a bare CSI > m or CSI > n resets every resource; CSI > 0 m is another resource
+    for (const off of ["\x1b[>4;0m", "\x1b[>4m", "\x1b[>4n", "\x1b[>m", "\x1b[>n"]) {
       replay.append("\x1b[>4;1m" + off + "z".repeat(40));
       expect(replay.text()).toBe("\x1b[?1049h" + "z".repeat(16));
     }

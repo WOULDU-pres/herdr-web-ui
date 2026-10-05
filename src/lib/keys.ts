@@ -53,6 +53,10 @@ export function keySequence(key: KeyBarKey, applicationCursorKeys: boolean): str
  * attach; Claude Code asks for level 2.
  */
 export function modifyOtherKeysLevel(level: number, final: "m" | "n", params: ReadonlyArray<number | number[]>): number {
+  // a bare CSI > m or CSI > n resets every key-modifier resource (xterm). xterm.js hands it over
+  // as [0], the same as an explicit resource 0 (modifyKeyboard, which this does not track): off
+  // is the safe reading, since a level left on would type CSI 27;5;13~ into a shell
+  if (params.length === 0 || (params.length === 1 && params[0] === 0)) return 0;
   if (params[0] !== 4) return level;
   const value = params[1];
   return final === "m" && typeof value === "number" ? value : 0;

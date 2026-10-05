@@ -699,7 +699,13 @@ export function PaneTerminal({
         const generation = outputGeneration;
         term.write(message.data, () => {
           acknowledge?.();
-          if (paneRef.current !== owner || generation !== outputGeneration) return;
+          if (paneRef.current !== owner || generation !== outputGeneration) {
+            // output of a pane left behind, or of a dropped connection, was still queued in xterm
+            // when the switch reset the level: whatever its parse just set, the level is off again
+            // (writes are parsed in order, so no newer output has been read yet)
+            modifyOtherKeysRef.current = 0;
+            return;
+          }
           setOutputReady(true);
           followCursor();
           const lines: string[] = [];

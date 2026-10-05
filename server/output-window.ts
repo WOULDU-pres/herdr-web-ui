@@ -30,8 +30,8 @@ export class OutputWindow {
 
 /** DEC private mode switches (CSI ? Pm h / CSI ? Pm l): alternate screen, mouse reporting, ... */
 const PRIVATE_MODES = /\x1b\[\?([\d;]+)([hl])/g;
-/** xterm's modifyOtherKeys: CSI > 4 ; level m, off with CSI > 4 m or CSI > 4 n */
-const MODIFY_OTHER_KEYS = /\x1b\[>4(?:;(\d*))?([mn])/g;
+/** xterm's modifyOtherKeys: CSI > 4 ; level m, off with CSI > 4 m, CSI > 4 n, or a bare CSI > m / CSI > n (every resource reset) */
+const MODIFY_OTHER_KEYS = /\x1b\[>(4(?:;(\d*))?)?([mn])/g;
 /** An ESC, or a CSI still missing its final byte. */
 const INCOMPLETE_CSI = /^\x1b(\[[\x30-\x3f]*[\x20-\x2f]*)?$/;
 
@@ -77,7 +77,7 @@ export class ReplayBuffer {
         this.modes.set(mode, state as "h" | "l");
       }
     }
-    for (const [, level, final] of cut.matchAll(MODIFY_OTHER_KEYS)) this.modifyOtherKeys = final === "m" ? Number(level || 0) : 0;
+    for (const [, resource, level, final] of cut.matchAll(MODIFY_OTHER_KEYS)) this.modifyOtherKeys = resource && final === "m" ? Number(level || 0) : 0;
     this.tail = bytes.subarray(start).toString("utf8");
   }
 
