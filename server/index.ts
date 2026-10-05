@@ -336,6 +336,8 @@ export function createServer(
     attachHeldRetryMs?: number;
     /** ATTACH_RELOOKUP_FOR_MS; tests shorten it */
     attachRelookupForMs?: number;
+    /** ATTACH_HOLD_MS; a test lengthens it so an attach's exit always comes before its hold ends */
+    attachHoldMs?: number;
     /** whether herdr can `terminal attach`; unset, its ping says, and this runtime's PTY sidecar has to be runnable. Tests give a Windows herdr's answer, at once or as late as a ping's. */
     terminalAttach?: boolean | (() => Promise<boolean>);
     /** whether this runtime can run the PTY sidecar; unset, server/pty/sidecar.ts says. Tests give a runtime without Node or node-pty, while herdr keeps its own answer. */
@@ -356,6 +358,7 @@ export function createServer(
   const retryFor = options.attachRetryForMs ?? ATTACH_RETRY_FOR_MS;
   const heldRetry = options.attachHeldRetryMs ?? ATTACH_HELD_RETRY_MS;
   const relookupFor = options.attachRelookupForMs ?? ATTACH_RELOOKUP_FOR_MS;
+  const holdFor = options.attachHoldMs ?? ATTACH_HOLD_MS;
   /** attachments still resolving their terminal, so concurrent attaches share one pty */
   const pendingAttachments = new Map<string, Promise<PaneAttachment>>();
   // herdr releases its exclusive attach slot only after the old process exits.
@@ -727,7 +730,7 @@ export function createServer(
         const visible = outputTail.push(data);
         if (visible) forward(visible);
         // A pane may print the same bytes without exiting: never keep its text indefinitely.
-        if (outputTail.pending) tailTimer = setTimeout(flushTail, ATTACH_HOLD_MS);
+        if (outputTail.pending) tailTimer = setTimeout(flushTail, holdFor);
       };
       /** ended before its exit came: what it still prints is no attach's */
       let retired = false;
@@ -746,7 +749,7 @@ export function createServer(
         // the input to a pane another bridge may hold. Only output after it is an attach's.
         if (ATTACH_REFUSING_RE.test(output)) {
           if (Date.now() - heldSince < ATTACH_REFUSAL_EXIT_MS) {
-            holdTimer = setTimeout(took, ATTACH_HOLD_MS);
+            holdTimer = setTimeout(took, holdFor);
             return;
           }
           // its exit is overdue: this try ends here, as that exit would have ended it (a pane
@@ -777,17 +780,18 @@ export function createServer(
         if (attachment.ready) broadcast(paneId, { type: "input-ready", pane_id: paneId, ready: false });
         attachment.ready = false;
         const now = Date.now();
-        if (code !== 0 && ATTACH_READ_RACE_RE.test(output) && now - (refusedSince ??= now) < retryFor) {
+        // displaced after attaching (herdr's last words): the read-race words may still be on its screen
+        const displaced = code !== 0 && isTakeoverExit(output);
+        if (!displaced && code !== 0 && ATTACH_READ_RACE_RE.test(output) && now - (refusedSince ??= now) < retryFor) {
           held = null;
           retries += 1;
           // An explicit request survives a read race only until an attach succeeds.
-          takeover = takingOver ?? takeoverWanted;
+          takeover = mayTakeOver(takingOver) ? takingOver : takeoverWanted;
           takeoverWanted = null;
           attachment.retry = setTimeout(again, Math.min(ATTACH_RETRY_MS * 2 ** (retries - 1), ATTACH_RETRY_MAX_MS));
           return;
         }
-        if (code !== 0 && (ATTACH_HELD_RE.test(output) || isTakeoverExit(output))) {
-          const displaced = isTakeoverExit(output);
+        if (displaced || (code !== 0 && ATTACH_HELD_RE.test(output))) {
           flushTail(displaced);
           held = null; // herdr's refusal is not the pane's output: never painted, and it repeats
           // waiting for the other bridge is not a read race: the next one gets its full budget
@@ -877,7 +881,7 @@ export function createServer(
           if (!holding && !ATTACH_PREAMBLE_RE.test(held)) {
             holding = true;
             heldSince = Date.now();
-            holdTimer = setTimeout(took, ATTACH_HOLD_MS);
+            holdTimer = setTimeout(took, holdFor);
           }
         },
         onExit: ended,

@@ -27,8 +27,8 @@ if (step.kind === "real") {
     ? "terminal attach failed: terminal term_test already has an attached client; retry with --takeover"
     : "terminal attach failed: terminal term_test has a read in progress; retry";
   const text = step.kind === "failed" ? "terminal attach taken over\r\n"
-    // attached, then displaced by another client: herdr 0.9's teardown, then its diagnostic
-    : step.kind === "taken" ? "\x1b[?1049l\x1b[?25h\x1b[0 qherdr: server shut down: terminal attach taken over\r\n"
+    // attached (its screen showing herdr's read-race words), then displaced: herdr 0.9's teardown and diagnostic
+    : step.kind === "taken" ? "pane text: has a read in progress; retry\r\n\x1b[?1049l\x1b[?25h\x1b[0 qherdr: server shut down: terminal attach taken over\r\n"
     : "herdr: server shut down: " + message + "\r\n";
   process.stdout.write(text, () => {
     log({ type: "exit", attempt });

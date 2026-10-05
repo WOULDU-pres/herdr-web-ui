@@ -27,7 +27,7 @@ type Step = { kind: "held" | "read-race" | "real" | "failed" | "taken"; gate?: s
 type Event = { type: string; attempt: number; pid: number; host: number; args: string[] };
 
 /** A real server/socket/sidecar with file gates at the attach CLI boundary. */
-async function fixture(steps: Step[]) {
+async function fixture(steps: Step[], attachHoldMs?: number) {
   const root = mkdtempSync(join(tmpdir(), "herdr-takeover-race-"));
   const executable = join(root, "herdr.mjs");
   copyFileSync(join(import.meta.dir, "../scripts/fixtures/attach-sequence.mjs"), executable);
@@ -42,7 +42,7 @@ async function fixture(steps: Step[]) {
     "workspace.create", { label: "herdr-web-ui-test-takeover-race", cwd: root, focus: false },
   );
   const paneId = created.root_pane.pane_id;
-  const server = createServer({ port: 0, hostname: "127.0.0.1", token: "", stateDir: join(root, "state"), attachHeldRetryMs: 80, attachRelookupForMs: 400 });
+  const server = createServer({ port: 0, hostname: "127.0.0.1", token: "", stateDir: join(root, "state"), attachHeldRetryMs: 80, attachRelookupForMs: 400, attachHoldMs });
   const ws = new WebSocket(`ws://127.0.0.1:${server.port}/ws`);
   const frames: ServerMessage[] = [];
   ws.addEventListener("message", (e) => frames.push(JSON.parse(String(e.data))));
@@ -91,13 +91,41 @@ describe("explicit take-over intent", () => {
   }, 20_000);
 
   it("drops a click when the attempt it waited on attaches and is displaced before it settles", async () => {
-    const f = await fixture([{ kind: "held" }, { kind: "taken", gate: "attach" }, { kind: "real" }]);
+    // a hold far longer than the fixture's exit: the attach is displaced before it settles, every run
+    const f = await fixture([{ kind: "held" }, { kind: "taken", gate: "attach" }, { kind: "real" }], 5_000);
     await until(() => f.starts().length === 2, "ordinary retry held at its gate");
     f.send({ type: "take-over", pane_id: f.paneId });
     await f.barrier();
     f.release("attach");
     await until(() => f.starts().length === 3, "displaced bridge tries again");
+    expect(f.frames.some((m) => m.type === "attach-resumed")).toBe(false);
     expect(f.starts()[2]!.args).not.toContain("--takeover");
+  }, 20_000);
+
+  it("keeps another client's click when the clicker of a running takeover turns to observe", async () => {
+    const f = await fixture([{ kind: "held" }, { kind: "held", gate: "retry" }, { kind: "read-race", gate: "read" }, { kind: "real" }]);
+    await until(() => f.starts().length === 2, "ordinary retry held at its gate");
+    const other = new WebSocket(`ws://127.0.0.1:${f.server.port}/ws`);
+    const seen: ServerMessage[] = [];
+    other.addEventListener("message", (e) => seen.push(JSON.parse(String(e.data))));
+    cleanups.push(() => other.close());
+    await until(() => other.readyState === WebSocket.OPEN, "second client open");
+    other.send(JSON.stringify({ type: "attach", pane_id: f.paneId, cols: 100, rows: 30 }));
+    other.send(JSON.stringify({ type: "role", mode: "interact" }));
+    await until(() => seen.some((m) => m.type === "role-ack"), "second client attached");
+    f.send({ type: "take-over", pane_id: f.paneId });
+    await f.barrier();
+    f.release("retry");
+    await until(() => f.starts().length === 3, "the first client's takeover attempt");
+    expect(f.starts()[2]!.args).toContain("--takeover");
+    other.send(JSON.stringify({ type: "take-over", pane_id: f.paneId }));
+    other.send(JSON.stringify({ type: "role", mode: "interact" }));
+    await until(() => seen.filter((m) => m.type === "role-ack").length === 2, "second client clicked");
+    f.send({ type: "role", mode: "observe" });
+    await until(() => f.frames.some((m) => m.type === "role-ack" && m.mode === "observe"), "first client observes");
+    f.release("read");
+    await until(() => f.starts().length === 4, "attempt after the read race");
+    expect(f.starts()[3]!.args).toContain("--takeover");
   }, 20_000);
 
   it("drops a click whose clicker turns to observe before the deferred attempt", async () => {
