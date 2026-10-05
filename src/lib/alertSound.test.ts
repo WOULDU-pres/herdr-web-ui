@@ -142,4 +142,16 @@ describe("one chime at a time", () => {
     expect(started).toEqual([...CHIME_NOTES.blocked, ...CHIME_NOTES.done]);
     expect(startedAt[2]).toBeCloseTo(now + 10 + LENGTH);
   });
+
+  it("tells a question by the question that sounds, also with a preview waiting behind it", () => {
+    const audio = made.at(-1)!;
+    playAlertSound("blocked");
+    previewAlertSound();
+    playAlertSound("blocked");
+    expect(started).toEqual([...CHIME_NOTES.blocked, ...CHIME_NOTES.done]);
+    // the question has ended and only the preview sounds: a new question is not told by it
+    audio.currentTime += LENGTH + 0.01;
+    playAlertSound("blocked");
+    expect(started).toEqual([...CHIME_NOTES.blocked, ...CHIME_NOTES.done, ...CHIME_NOTES.blocked]);
+  });
 });

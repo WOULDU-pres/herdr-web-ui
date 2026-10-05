@@ -27,8 +27,9 @@ const NOTE_LENGTH_S = 0.3;
 const PEAK_GAIN = 0.25;
 
 let context: AudioContext | null = null;
-// this tab's last chime, on its context's clock
-let sounding: { audio: AudioContext; kind: AlertSoundKind; until: number } | null = null;
+// this tab's chimes that have not ended, on its context's clock: when the last of them ends,
+// and when the last question's does (a preview queued behind a question does not move that)
+let sounding: { audio: AudioContext; until: number; question: number } | null = null;
 
 function contextClass(): typeof AudioContext | undefined {
   return globalThis.AudioContext ?? (globalThis as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -67,13 +68,10 @@ export function previewAlertSound(): void {
 /** Plays `kind` unless this tab's last chime still sounds; a preview then starts where it ends. */
 function chime(audio: AudioContext, kind: AlertSoundKind, preview = false): void {
   const now = audio.currentTime;
-  let start = now;
   const current = sounding !== null && sounding.audio === audio && sounding.until > now ? sounding : null;
-  if (current) {
-    // already told by the chime that sounds, except a question after a finish
-    if (!preview && (kind !== "blocked" || current.kind === "blocked")) return;
-    start = current.until;
-  }
+  // already told by a chime that sounds or waits its turn: a finish by any, a question by a question's
+  if (current && !preview && (kind === "done" || current.question > now)) return;
+  const start = current ? current.until : now;
   const notes = CHIME_NOTES[kind];
   notes.forEach((frequency, index) => {
     const at = start + index * NOTE_GAP_S;
@@ -89,5 +87,6 @@ function chime(audio: AudioContext, kind: AlertSoundKind, preview = false): void
     oscillator.start(at);
     oscillator.stop(at + NOTE_LENGTH_S);
   });
-  sounding = { audio, kind, until: start + (notes.length - 1) * NOTE_GAP_S + NOTE_LENGTH_S };
+  const until = start + (notes.length - 1) * NOTE_GAP_S + NOTE_LENGTH_S;
+  sounding = { audio, until, question: kind === "blocked" && !preview ? until : current?.question ?? 0 };
 }
