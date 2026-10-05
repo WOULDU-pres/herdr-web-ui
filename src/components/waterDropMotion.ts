@@ -169,6 +169,10 @@ export function createDropMotion(liquid: HTMLElement, { radius, maxBead = Infini
   const popBeads = (): void => {
     for (const node of [...beads.keys()]) {
       beads.delete(node);
+      if (reduced.matches) {
+        node.remove();
+        continue;
+      }
       const scale = getComputedStyle(node).getPropertyValue("scale");
       node.animate([{ scale: scale === "none" || scale === "" ? "1" : scale }, { scale: "0.1" }], { duration: ms("--dur-base"), easing: "ease-in", fill: "forwards" })
         .onfinish = () => node.remove();
