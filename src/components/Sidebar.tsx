@@ -505,6 +505,7 @@ export function Sidebar({ snapshot, selectedPaneId, actions }: SidebarProps) {
             const own = visiblePanes.filter((candidate) => candidate.tab_id === tab.tab_id);
             if (own.length === 0) return null;
             const target = currentPane(workspace, own, tab.tab_id);
+            const restoreError = own.find((candidate) => candidate.restore_error)?.restore_error;
             const name = tabLabel(tab, t, index + 1);
             return <li key={tab.tab_id}>
               <button
@@ -519,7 +520,7 @@ export function Sidebar({ snapshot, selectedPaneId, actions }: SidebarProps) {
                   {target.agent ? <AgentMark agent={target.agent} size={18} /> : <Terminal aria-hidden="true" />}
                 </span>
                 <span className="sidebar-tab-copy"><span className="sidebar-tab-name">{name}</span><span className="sidebar-tab-pane">{displayPaneTitle(target)}</span></span>
-                <StatusBadge status={rollupStatus(own.map((candidate) => candidate.agent_status))} />
+                {restoreError ? <RestoreErrorBadge reason={restoreError} /> : <StatusBadge status={rollupStatus(own.map((candidate) => candidate.agent_status))} />}
               </button>
             </li>;
           })}

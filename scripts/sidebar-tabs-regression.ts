@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Browser, Page } from "playwright-core";
+import type { Machine } from "../shared/machines.ts";
 import { herdrRpc, paneRename, tabClose, tabCreate, tabRename, workspaceClose, workspaceCreate } from "../server/herdr/client.ts";
 
 async function selected(page: Page, paneId: string): Promise<void> {
@@ -63,6 +64,7 @@ export async function checkSidebarTabs(browser: Browser, origin: string): Promis
     await tab(firstTab).waitFor();
     assert.deepEqual(await page.locator(".sidebar-tab-name").allTextContents(), ["Tab 1", "Review", "Docs"]);
     assert.equal(await page.locator(`.workspace:has(.pane-select[title^="${lone.root_pane.pane_id} —"]) .sidebar-tabs`).count(), 0, "a lone tab adds no duplicate row");
+    await tab(second.tab.tab_id).locator(".badge", { hasText: "INPUT" }).waitFor();
     assert.equal(await tab(second.tab.tab_id).locator(".badge").textContent(), "INPUT");
     await screenshot("on-dark");
 
@@ -123,12 +125,45 @@ export async function checkSidebarTabs(browser: Browser, origin: string): Promis
       assert.equal(await mobile.locator("#workspace-drawer.is-open").count(), 0, "a tap switches tabs and closes the drawer");
     } finally { await phone.close(); }
 
+    // Simulate restoration failures in inactive tabs without changing herdr's pane state.
+    const restored = await context.newPage();
+    restored.setDefaultTimeout(10_000);
+    restored.on("pageerror", (error) => errors.push(error.message));
+    try {
+      await restored.route("**/api/machines/events", (route) => route.abort());
+      await restored.route("**/api/machines", async (route) => {
+        const response = await route.fetch();
+        const body = await response.json() as { machines: Machine[] };
+        for (const machine of body.machines) {
+          if (machine.id !== "local" || !machine.snapshot) continue;
+          for (const pane of machine.snapshot.panes) {
+            if (pane.pane_id === second.root_pane.pane_id) pane.restore_error = "Review pane could not be restored";
+            if (pane.pane_id === created.root_pane.pane_id) pane.restore_error = "Main pane could not be restored";
+          }
+          const layout = machine.snapshot.layouts?.find((candidate) => candidate.tab_id === firstTab);
+          if (layout) layout.focused_pane_id = split.pane.pane_id;
+        }
+        await route.fulfill({ response, json: body });
+      });
+      await restored.goto(`${origin}/?pane=${encodeURIComponent(third.root_pane.pane_id)}`);
+      await selected(restored, third.root_pane.pane_id);
+      const restoredTab = (id: string) => restored.locator(`.sidebar-tab[data-tab-id="${id}"]`);
+      await restoredTab(second.tab.tab_id).locator(".badge-restore-error").waitFor();
+      assert.equal(await restoredTab(second.tab.tab_id).locator(".badge").textContent(), "NOT RESTORED", "restoration failure takes precedence over INPUT");
+      assert.equal(await restoredTab(second.tab.tab_id).locator(".badge").getAttribute("title"), "Review pane could not be restored");
+      assert.equal(await restoredTab(firstTab).locator(".sidebar-tab-pane").textContent(), "Split pane", "the split tab targets its healthy pane");
+      assert.equal(await restoredTab(firstTab).locator(".badge").getAttribute("title"), "Main pane could not be restored", "an error in another split pane still marks its tab");
+      assert.equal(await restored.locator(".pane-meta .badge-restore-error").count(), 0, "the workspace row can show a healthy pane while inactive tabs have errors");
+      assert.equal(await restoredTab(third.tab.tab_id).locator(".badge-restore-error").count(), 0, "healthy tabs keep their status badge");
+      if (evidence) await restored.screenshot({ path: join(evidence, "sidebar-tabs-restore-error.png"), animations: "disabled" });
+    } finally { await restored.close(); }
+
     await tabClose(second.tab.tab_id);
     await tab(second.tab.tab_id).waitFor({ state: "detached" });
     await tabClose(third.tab.tab_id);
     await page.locator(".sidebar-tabs").waitFor({ state: "detached" });
     assert.deepEqual(errors, []);
-    console.log("PASS sidebar tabs: opt-in, order/status, keyboard selection, split-pane memory, reload, grouping, rename/close, themes and touch");
+    console.log("PASS sidebar tabs: opt-in, order/status, restoration errors, keyboard selection, split-pane memory, reload, grouping, rename/close, themes and touch");
   } finally {
     await context.close();
     try { for (const id of workspaces) await workspaceClose(id); }
