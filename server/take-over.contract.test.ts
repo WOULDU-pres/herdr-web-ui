@@ -23,7 +23,7 @@ function alive(pid: number): boolean {
   try { process.kill(pid, 0); return true; } catch { return false; }
 }
 
-type Step = { kind: "held" | "read-race" | "real" | "failed"; gate?: string };
+type Step = { kind: "held" | "read-race" | "real" | "failed" | "taken"; gate?: string };
 type Event = { type: string; attempt: number; pid: number; host: number; args: string[] };
 
 /** A real server/socket/sidecar with file gates at the attach CLI boundary. */
@@ -88,6 +88,47 @@ describe("explicit take-over intent", () => {
     await until(() => f.starts().length >= 3, "displaced bridge retries");
     expect(f.frames.filter((m) => m.type === "pty-data").map((m) => m.data).join("")).not.toContain("terminal attach taken over");
     expect(f.starts().slice(2).map((e) => e.args.includes("--takeover"))).toEqual([false]);
+  }, 20_000);
+
+  it("drops a click when the attempt it waited on attaches and is displaced before it settles", async () => {
+    const f = await fixture([{ kind: "held" }, { kind: "taken", gate: "attach" }, { kind: "real" }]);
+    await until(() => f.starts().length === 2, "ordinary retry held at its gate");
+    f.send({ type: "take-over", pane_id: f.paneId });
+    await f.barrier();
+    f.release("attach");
+    await until(() => f.starts().length === 3, "displaced bridge tries again");
+    expect(f.starts()[2]!.args).not.toContain("--takeover");
+  }, 20_000);
+
+  it("drops a click whose clicker turns to observe before the deferred attempt", async () => {
+    const f = await fixture([{ kind: "held" }, { kind: "held", gate: "retry" }, { kind: "real" }]);
+    await until(() => f.starts().length === 2, "ordinary retry held at its gate");
+    f.send({ type: "take-over", pane_id: f.paneId });
+    f.send({ type: "role", mode: "observe" });
+    await until(() => f.frames.some((m) => m.type === "role-ack" && m.mode === "observe"), "clicker observes");
+    f.release("retry");
+    await until(() => f.starts().length === 3, "next attempt");
+    expect(f.starts()[2]!.args).not.toContain("--takeover");
+  }, 20_000);
+
+  it("drops a click whose clicker leaves while another client still watches", async () => {
+    const f = await fixture([{ kind: "held" }, { kind: "held", gate: "retry" }, { kind: "real" }]);
+    await until(() => f.starts().length === 2, "ordinary retry held at its gate");
+    const watcher = new WebSocket(`ws://127.0.0.1:${f.server.port}/ws`);
+    const seen: ServerMessage[] = [];
+    watcher.addEventListener("message", (e) => seen.push(JSON.parse(String(e.data))));
+    cleanups.push(() => watcher.close());
+    await until(() => watcher.readyState === WebSocket.OPEN, "watcher open");
+    watcher.send(JSON.stringify({ type: "role", mode: "observe" }));
+    watcher.send(JSON.stringify({ type: "attach", pane_id: f.paneId, cols: 100, rows: 30 }));
+    watcher.send(JSON.stringify({ type: "role", mode: "observe" }));
+    await until(() => seen.filter((m) => m.type === "role-ack").length === 2, "watcher attached");
+    f.send({ type: "take-over", pane_id: f.paneId });
+    f.send({ type: "detach", pane_id: f.paneId });
+    await f.barrier();
+    f.release("retry");
+    await until(() => f.starts().length === 3, "the watcher's next attempt");
+    expect(f.starts()[2]!.args).not.toContain("--takeover");
   }, 20_000);
 
   it("cancels a read-race backoff before a click starts the next attach", async () => {

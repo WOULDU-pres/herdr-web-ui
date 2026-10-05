@@ -278,8 +278,8 @@ interface PaneAttachment {
   held?: boolean;
   /** the next held or read-race retry; takeover and close both cancel it */
   retry?: ReturnType<typeof setTimeout>;
-  /** a held terminal's next try takes the slot from the other bridge (`take-over`); a pty attachment only */
-  takeOver?: () => void;
+  /** a held terminal's next try takes the slot from the other bridge for this client (`take-over`); a pty attachment only */
+  takeOver?: (client: Client) => void;
   /** the next look for the terminal a pane lives on after herdr ended its attach; a closed attachment cancels it */
   relookup?: ReturnType<typeof setTimeout>;
 }
@@ -676,9 +676,12 @@ export function createServer(
     };
     let retries = 0;
     let refusedSince: number | null = null;
-    /** the next start takes the slot; asked for while a try was still running, the one after it */
-    let takeover = false;
-    let takeoverWanted = false;
+    /** who asked the next start to take the slot; asked for while a try was still running, the one after it */
+    let takeover: Client | null = null;
+    let takeoverWanted: Client | null = null;
+    /** A click counts only while its client is still here and may type: no later start acts for one that left or observes. */
+    const mayTakeOver = (client: Client | null): client is Client =>
+      client !== null && attachment.clients.has(client) && client.data.mode === "interact" && !client.data.closing;
     /** an attempt, live attach or terminal lookup is running: another start must wait */
     let trying = false;
     /** Starts at most one attempt, cancelling any scheduled retry before it can overlap. */
@@ -702,8 +705,8 @@ export function createServer(
     /** the terminal attached to: a pane keeps its id across a server handoff, its terminal does not */
     let attachedTerminal = terminalId;
     const start = (): PtySession => {
-      let takingOver = takeover;
-      takeover = false;
+      let takingOver = mayTakeOver(takeover) ? takeover : null;
+      takeover = null;
       trying = true;
       let output = ""; // this attach's own last words: herdr's refusal is in them
       // its first bytes wait ATTACH_HOLD_MS: a refusal (herdr's setup, teardown and message)
@@ -754,9 +757,9 @@ export function createServer(
           return;
         }
         // A click is consumed by success, including an ordinary retry that won the slot.
-        takeoverWanted = false;
-        takeover = false;
-        takingOver = false;
+        takeoverWanted = null;
+        takeover = null;
+        takingOver = null;
         // the attach took: a pane that waited for another bridge is this bridge's again
         if (attachment.held) {
           attachment.held = false;
@@ -778,13 +781,14 @@ export function createServer(
           held = null;
           retries += 1;
           // An explicit request survives a read race only until an attach succeeds.
-          takeover = takingOver || takeoverWanted;
-          takeoverWanted = false;
+          takeover = takingOver ?? takeoverWanted;
+          takeoverWanted = null;
           attachment.retry = setTimeout(again, Math.min(ATTACH_RETRY_MS * 2 ** (retries - 1), ATTACH_RETRY_MAX_MS));
           return;
         }
         if (code !== 0 && (ATTACH_HELD_RE.test(output) || isTakeoverExit(output))) {
-          flushTail(isTakeoverExit(output));
+          const displaced = isTakeoverExit(output);
+          flushTail(displaced);
           held = null; // herdr's refusal is not the pane's output: never painted, and it repeats
           // waiting for the other bridge is not a read race: the next one gets its full budget
           refusedSince = null;
@@ -794,18 +798,20 @@ export function createServer(
           // to let go, trying again while anyone here still has it open, instead of ending.
           if (!attachment.held) broadcast(paneId, { type: "error", code: "attach_held", message: ATTACH_HELD_MESSAGE, pane_id: paneId });
           attachment.held = true;
-          if (takeoverWanted) {
-            takeoverWanted = false;
-            takeover = true;
+          // Displaced after attaching: a click this attach waited on is spent, only a new one takes it back.
+          if (!displaced && mayTakeOver(takeoverWanted)) {
+            takeover = takeoverWanted;
+            takeoverWanted = null;
             again();
           } else {
+            takeoverWanted = null;
             attachment.retry = setTimeout(again, heldRetry);
           }
           return;
         }
-        takeoverWanted = false;
-        takeover = false;
-        takingOver = false;
+        takeoverWanted = null;
+        takeover = null;
+        takingOver = null;
         trying = true; // a live-handoff lookup owns the next start until it finishes
         release();
         flushTail();
@@ -878,14 +884,14 @@ export function createServer(
       });
       return session;
     };
-    attachment.takeOver = () => {
+    attachment.takeOver = (client) => {
       if (attachments.get(paneId) !== attachment || !attachment.held) return;
       if (trying) {
-        takeoverWanted = true;
+        takeoverWanted = client;
         return;
       }
       clearTimeout(attachment.retry);
-      takeover = true;
+      takeover = client;
       again();
     };
     try {
@@ -1757,7 +1763,7 @@ export function createServer(
                 break;
               }
               const attachment = attachments.get(message.pane_id);
-              if (attachment?.clients.has(client)) attachment.takeOver?.();
+              if (attachment?.clients.has(client)) attachment.takeOver?.(client);
               break;
             }
             case "detach": {
