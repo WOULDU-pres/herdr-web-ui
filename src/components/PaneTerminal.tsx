@@ -777,24 +777,11 @@ export function PaneTerminal({
       term.input(sequence);
     };
     host.addEventListener("keydown", onCommandArrow);
-    // On macOS, Ctrl+arrows use the same word movement as Option+arrows (Esc+b/f).
-    // onKey follows pending IME commits; replace only this key's following data.
-    let controlArrow: { key: string; sequence: string } | null = null;
-    const onControlArrow = term.onKey(({ key, domEvent: event }) => {
-      controlArrow = null;
-      if (!isMac || term.options.disableStdin || composingRef.current || event.type !== "keydown"
-        || !event.ctrlKey || event.metaKey || event.altKey || event.shiftKey
-        || event.isComposing || event.keyCode === 229) return;
-      if (event.key === "ArrowLeft" && key === "\x1b[1;5D") controlArrow = { key, sequence: "\x1bb" };
-      else if (event.key === "ArrowRight" && key === "\x1b[1;5C") controlArrow = { key, sequence: "\x1bf" };
-    });
     const onData = term.onData((data) => {
       if (shiftEnter && data === "\r") data = "\x1b\r";
       shiftEnter = false;
       if (commandBackspace && data === "\x7f") data = "\x15";
       commandBackspace = false;
-      if (controlArrow !== null && data === controlArrow.key) data = controlArrow.sequence;
-      controlArrow = null;
       const current = paneRef.current;
       if (!current || observeRef.current || secretRef.current !== null || heldRef.current) return;
       let input = data;
@@ -989,7 +976,6 @@ export function PaneTerminal({
       onShiftEnter.dispose();
       onCommandBackspace.dispose();
       host.removeEventListener("keydown", onCommandArrow);
-      onControlArrow.dispose();
       onData.dispose();
       host.removeEventListener("paste", onFilePaste, { capture: true });
       host.removeEventListener("dragover", onDragOver);

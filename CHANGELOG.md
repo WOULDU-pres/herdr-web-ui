@@ -9,8 +9,7 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 
 ### Fixed
 - In the terminal on macOS, Cmd+Left and Cmd+Right move to the beginning and end of the
-  input line, using the same terminal keys as Ctrl+A and Ctrl+E. Ctrl+Left and Ctrl+Right
-  move one word at a time, using the same terminal keys as Option+Left and Option+Right.
+  input line, using the same terminal keys as Ctrl+A and Ctrl+E.
   ([#437](https://github.com/devswha/herdr-web-ui/pull/437) by @WOULDU-pres)
 - Attaching a file over 8 MB says so at once, with its size and the limit, instead of uploading
   it first and answering `/api/pane/image failed (413)`. Past about 96 MB that message gave no

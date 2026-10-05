@@ -29,14 +29,10 @@ waits for composition to finish. Leaving the input clears its composition guard.
 
 On macOS, Cmd+Left and Cmd+Right in direct typing send Ctrl+A and Ctrl+E, moving to the
 beginning and end of the input line in shells and agents that use those bindings.
-Ctrl+Left and Ctrl+Right send Esc+b and Esc+f, the same word movement as Option+Left and
-Option+Right. Pending IME text is sent first. Additional modifiers retain xterm's behavior;
-the input line and chat composer keep their native text editing. Windows and Linux keep
-their existing Ctrl+arrow sequences.
-
-macOS also uses Ctrl+Left/Right to [switch Spaces](https://support.apple.com/guide/mac-help/work-in-multiple-spaces-mh14112/mac).
-If those system shortcuts take the keys, disable or reassign them so the browser receives
-the chord.
+Pending IME text is sent first. Additional modifiers retain xterm's behavior; the input line
+and chat composer keep their native text editing. Ctrl+Left and Ctrl+Right are sent as xterm
+sends them on every platform, so a program in the pane that binds them (tmux, an editor) still
+receives them; Option+Left and Option+Right move by word.
 
 ## Readiness and failures
 
@@ -67,8 +63,8 @@ The new readiness frame is also implemented in the website demo transport.
 - `bun run test:ui`: includes those checks plus the existing mobile, clipboard, secret-entry,
   reconnect, prompt, queue and viewport checks. `UI_EVIDENCE_DIR` saves screenshots.
 - `bun run build && bun scripts/terminal-command-arrows-regression.ts`: Cmd+Left/Right line
-  movement and Ctrl+Left/Right word movement, exact bytes and real readline cursor positions,
-  IME ordering, repeat, modifier, Windows and Linux checks.
+  movement, exact bytes and real readline cursor positions, IME ordering, repeat, modifier,
+  unchanged Ctrl+arrows, Windows and Linux checks.
   Uses Chromium with a simulated Mac platform, not native macOS Safari or an OS IME.
 - `bun scripts/file-viewer-regression.ts`: existing navigation and touch regressions.
 

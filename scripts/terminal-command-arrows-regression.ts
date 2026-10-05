@@ -51,9 +51,9 @@ export async function checkCommandArrows(browser: Browser, origin: string, paneI
       const mac = platform === "MacIntel";
       for (const [key, code, sequence] of [["ArrowLeft", 37, "\x01"], ["ArrowRight", 39, "\x05"]] as const) {
         const final = key === "ArrowLeft" ? "D" : "C";
-        const wordSequence = key === "ArrowLeft" ? "\x1bb" : "\x1bf";
         await check(() => input.press(`Meta+${key}`), mac ? [sequence] : [], `${platform} Cmd+${key}`);
-        await check(() => input.press(`Control+${key}`), [mac ? wordSequence : `\x1b[1;5${final}`], `${platform} Ctrl+${key} word movement`);
+        // Ctrl+arrow is the pane's own key on every platform: tmux and editors bind it
+        await check(() => input.press(`Control+${key}`), [`\x1b[1;5${final}`], `${platform} Ctrl+${key} reaches the pane as itself`);
         if (!mac) continue;
         for (const modifier of ["Shift", "Alt", "Control"]) {
           await check(() => input.press(`Meta+${modifier}+${key}`), [], `Cmd+${modifier}+${key} stays native`);
@@ -61,32 +61,30 @@ export async function checkCommandArrows(browser: Browser, origin: string, paneI
         for (const [modifier, modifiers] of [["Shift", 6], ["Alt", 7]] as const) {
           await check(() => input.press(`Control+${modifier}+${key}`), [`\x1b[1;${modifiers}${final}`], `Ctrl+${modifier}+${key} stays native`);
         }
-        for (const ctrlKey of [false, true]) {
-          for (const composition of [{ isComposing: true, keyCode: code }, { isComposing: false, keyCode: 229 }]) {
-            await check(() => input.dispatchEvent("keydown", {
-              key, code: key, metaKey: !ctrlKey, ctrlKey, ...composition, bubbles: true, cancelable: true,
-            }), ctrlKey && composition.keyCode !== 229 ? [`\x1b[1;5${final}`] : [], "active IME keys retain xterm's behavior without remapping");
-          }
-          await check(() => input.evaluate(async (element, { key, code, ctrlKey }) => {
-            const textarea = element as HTMLTextAreaElement;
-            textarea.value = "";
-            textarea.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
-            textarea.value = "한";
-            textarea.dispatchEvent(new CompositionEvent("compositionupdate", { data: "한", bubbles: true }));
-            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-            textarea.dispatchEvent(new CompositionEvent("compositionend", { data: "한", bubbles: true }));
-            const event = { key, code: key, keyCode: code, which: code, metaKey: !ctrlKey, ctrlKey, bubbles: true, cancelable: true };
-            textarea.dispatchEvent(new KeyboardEvent("keydown", event));
-            textarea.dispatchEvent(new KeyboardEvent("keyup", event));
-          }, { key, code, ctrlKey }), ["한", ctrlKey ? wordSequence : sequence], "pending IME text must precede cursor movement exactly once");
-          await check(() => input.evaluate((element, { key, code, ctrlKey }) => {
-            const event = new KeyboardEvent("keydown", {
-              key, code: key, keyCode: code, which: code, metaKey: !ctrlKey, ctrlKey, repeat: true, bubbles: true, cancelable: true,
-            });
-            element.dispatchEvent(event);
-            if (!event.defaultPrevented) throw new Error("Cmd/Ctrl+arrow must prevent the browser's navigation default");
-          }, { key, code, ctrlKey }), [ctrlKey ? wordSequence : sequence], "held Cmd/Ctrl+arrow repeats once per keydown");
+        for (const composition of [{ isComposing: true, keyCode: code }, { isComposing: false, keyCode: 229 }]) {
+          await check(() => input.dispatchEvent("keydown", {
+            key, code: key, metaKey: true, ...composition, bubbles: true, cancelable: true,
+          }), [], "active IME keys retain xterm's behavior without remapping");
         }
+        await check(() => input.evaluate(async (element, { key, code }) => {
+          const textarea = element as HTMLTextAreaElement;
+          textarea.value = "";
+          textarea.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+          textarea.value = "한";
+          textarea.dispatchEvent(new CompositionEvent("compositionupdate", { data: "한", bubbles: true }));
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          textarea.dispatchEvent(new CompositionEvent("compositionend", { data: "한", bubbles: true }));
+          const event = { key, code: key, keyCode: code, which: code, metaKey: true, bubbles: true, cancelable: true };
+          textarea.dispatchEvent(new KeyboardEvent("keydown", event));
+          textarea.dispatchEvent(new KeyboardEvent("keyup", event));
+        }, { key, code }), ["한", sequence], "pending IME text must precede cursor movement exactly once");
+        await check(() => input.evaluate((element, { key, code }) => {
+          const event = new KeyboardEvent("keydown", {
+            key, code: key, keyCode: code, which: code, metaKey: true, repeat: true, bubbles: true, cancelable: true,
+          });
+          element.dispatchEvent(event);
+          if (!event.defaultPrevented) throw new Error("Cmd+arrow must prevent the browser's navigation default");
+        }, { key, code }), [sequence], "held Cmd+arrow repeats once per keydown");
       }
       if (!mac) { console.log(`PASS ${platform} Meta/Ctrl+arrows stay native`); continue; }
 
@@ -104,7 +102,7 @@ process.stdin.on("data", (data) => {
 `);
       try {
         await paneSendKeys(paneId, ["ctrl+c"]);
-        await paneSendText(paneId, `node ${script}`);
+        await paneSendText(paneId, `node '${script.replaceAll("'", "'\\''")}'`);
         await paneSendKeys(paneId, ["Enter"]);
         await until(async () => (await paneRead({ paneId, source: "visible" })).text.includes("Owned macOS Cmd+Left"), "readline fixture must start");
         const probe = async (line: string, cursor: number) => {
@@ -130,7 +128,7 @@ process.stdin.on("data", (data) => {
           await page.locator(".xterm-rows", { hasText: "start middle end" }).waitFor();
           await page.screenshot({ path: join(process.env.UI_EVIDENCE_DIR, "macos-command-arrows.png") });
         }
-        // Normal arrows and Ctrl/Option word movement work in DECCKM mode.
+        // Normal arrows, Option word movement and Ctrl+arrows as xterm sends them work in DECCKM mode.
         await input.press("ArrowLeft"); await probe("start middle end", 15);
         await input.press("ArrowRight"); await probe("start middle end", 16);
         await input.press("Alt+ArrowLeft"); await probe("start middle end", 13);
@@ -146,7 +144,7 @@ process.stdin.on("data", (data) => {
         rmSync(fixture, { recursive: true, force: true });
       }
       console.log("PASS macOS Cmd+Left/Right moves to readline boundaries; normal and word arrows still work");
-      console.log("PASS Cmd/Ctrl+arrows preserve IME order and modifiers, suppress browser navigation and handle repeats");
+      console.log("PASS Cmd+arrows preserve IME order and modifiers, suppress browser navigation and handle repeats; Ctrl+arrows reach the pane unchanged");
     } finally { await context.close(); }
   }
 }
