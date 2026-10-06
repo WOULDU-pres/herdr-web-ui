@@ -65,7 +65,7 @@ tables above are amber, the base blocks; the four opt-in palettes override them 
 `[data-theme][data-palette]` blocks of `src/styles.css`, which hold the complete values.
 
 `--bubble-border` is the edge of the chat's user bubble. It is `transparent` where `--bg-elevated`
-alone parts the bubble from `--bg`: dark amber, dark report and dark charcoal. It is `var(--border)`
+alone parts the bubble from `--bg`: dark amber, dark report, dark charcoal and dark lilac. It is `var(--border)`
 where the two surfaces sit close: every light theme (the `[data-theme="light"]` block sets it for
 all palettes) and dark Catppuccin, whose elevated surface is darker than its canvas.
 
