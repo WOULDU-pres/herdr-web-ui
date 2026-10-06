@@ -8,6 +8,7 @@ import { chromium } from "playwright-core";
 import { createServer } from "../server/index.ts";
 import { herdrRpc, sessionSnapshot, workspaceCreate, workspaceClose } from "../server/herdr/client.ts";
 import type { WorkspaceCreated, WorktreeOpened } from "../shared/protocol.ts";
+import { alertsOffMarked, alertsState, runMoreItem } from "./header-more.ts";
 import { checkPushSettings } from "./push-settings-regression.ts";
 import { checkWakeLock } from "./wake-lock-regression.ts";
 import { checkNeedsInput } from "./needs-input-regression.ts";
@@ -22,9 +23,13 @@ import { checkTerminalInput } from "./terminal-input-regression.ts";
 import { checkDefaultView } from "./default-view-regression.ts";
 import { checkComposerReconnect } from "./composer-reconnect-regression.ts";
 import { checkDroplet } from "./droplet-regression.ts";
+import { checkTakeOver } from "./take-over-regression.ts";
 import { checkAlertSound } from "./alert-sound-regression.ts";
 import { checkChatKeepsTerminalSize, checkPaneSwitchKeepsTerminalSize } from "./chat-size-regression.ts";
 import { checkCommandBackspace } from "./terminal-command-backspace-regression.ts";
+import { checkCtrlEnter } from "./terminal-ctrl-enter-regression.ts";
+import { checkCommandArrows } from "./terminal-command-arrows-regression.ts";
+import { checkFolderFilter } from "./folder-filter-regression.ts";
 import { checkUpdateNotice } from "./update-notice-regression.ts";
 import { UsageService } from "../server/usage.ts";
 
@@ -65,7 +70,8 @@ try {
   const origin = `http://127.0.0.1:${server.port}`;
   browser = await chromium.launch({
     executablePath: process.env.CHROME_PATH ?? "/opt/google/chrome/chrome",
-    headless: true, args: ["--no-sandbox"],
+    // English whatever the machine's own languages are (macOS Chrome takes them from the system)
+    headless: true, args: ["--no-sandbox", "--accept-lang=en-US"],
   });
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   await context.addInitScript((ids) => {
@@ -151,10 +157,19 @@ try {
   await page.getByTitle("Live terminal (⌘⇧J)", { exact: true }).click();
   await checkTerminalFileInput(page, sockets[0]!);
   const terminalInput = page.locator(".xterm-helper-textarea");
+  // Chrome on macOS pastes with ⌘V alone: its Ctrl+V pastes nothing, and must send nothing either
+  const mac = process.platform === "darwin";
+  if (mac) {
+    await terminalInput.focus();
+    const beforeCtrlV = inputs.length;
+    await page.keyboard.press("Control+v");
+    await page.waitForTimeout(NO_SEND_WAIT_MS);
+    assert.deepEqual(inputs.slice(beforeCtrlV), [], "Ctrl+V must never send the image-paste control key");
+  }
   for (const [shortcut, text] of [
-    ["Control+v", "# terminal paste 한글"],
-    ["Control+v", "# first line\n# second line"],
-    ["Control+Shift+v", "# plain text paste"],
+    [mac ? "Meta+v" : "Control+v", "# terminal paste 한글"],
+    [mac ? "Meta+v" : "Control+v", "# first line\n# second line"],
+    ...mac ? [] : [["Control+Shift+v", "# plain text paste"]],
   ]) {
     await page.evaluate((value) => navigator.clipboard.writeText(value), text!);
     await terminalInput.focus();
@@ -225,6 +240,8 @@ try {
   console.log("PASS terminal Shift+Enter sends a newline chord once and preserves Enter, Alt+Enter and IME");
   console.log("PASS pending IME commit precedes Shift+Enter without duplicate text");
   await checkCommandBackspace(browser, origin, paneA);
+  await checkCtrlEnter(browser, origin, paneA);
+  await checkCommandArrows(browser, origin, paneA);
   // a pane shortcut switches panes and types nothing: xterm used to send ESC[1;6B / ESC[1;6A too
   const selectedTitle = () => page.locator(".pane-item.is-selected .pane-select").getAttribute("title");
   // A pane just picked shows the lens of the pane before it for a moment, and the message box
@@ -234,7 +251,7 @@ try {
     return page.evaluate(() => new Promise<boolean>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() =>
       resolve(document.activeElement?.classList.contains("xterm-helper-textarea") ?? false)))));
   }, "the terminal holds the focus");
-  for (const key of ["Control+Shift+ArrowDown", "Control+Shift+ArrowUp"]) {
+  for (const key of ["ControlOrMeta+Shift+ArrowDown", "ControlOrMeta+Shift+ArrowUp"]) {
     await focusTerminal();
     const beforeSwitch = inputs.length;
     await page.keyboard.press(key);
@@ -248,7 +265,7 @@ try {
   await composer.waitFor();
   console.log("PASS terminal clipboard paste sends text once and preserves Ctrl+C");
 
-  await page.keyboard.press("Control+Shift+Comma");
+  await page.keyboard.press("ControlOrMeta+Shift+Comma");
   await page.getByRole("dialog", { name: "Settings" }).waitFor();
   await page.getByRole("button", { name: "Light", exact: true }).click();
   assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
@@ -257,7 +274,7 @@ try {
 
   // Add PC lives in Settings → Remote PCs, not in the sidebar; opening it closes Settings behind it
   assert.equal(await page.locator(".sidebar").getByRole("button", { name: "Add PC", exact: true }).count(), 0, "the sidebar has no Add PC button");
-  await page.keyboard.press("Control+Shift+Comma");
+  await page.keyboard.press("ControlOrMeta+Shift+Comma");
   await page.getByRole("dialog", { name: "Settings" }).getByRole("button", { name: "Add PC", exact: true }).click();
   await page.getByRole("dialog", { name: "Add PC", exact: true }).waitFor();
   assert.equal(await page.getByRole("dialog", { name: "Settings" }).count(), 0, "Add PC closes Settings");
@@ -282,7 +299,7 @@ try {
   // the idle status poll runs every 30 s: a hide and a show restart it at once, onto the fake
   await setPageHidden(true);
   await setPageHidden(false);
-  await page.keyboard.press("Control+Shift+Comma");
+  await page.keyboard.press("ControlOrMeta+Shift+Comma");
   const checkUpdates = page.getByRole("dialog", { name: "Settings" }).getByRole("button", { name: "Check for updates", exact: true });
   await checkUpdates.waitFor();
   await checkUpdates.click();
@@ -297,25 +314,28 @@ try {
   await page.unroute("**/api/updates");
   console.log("PASS an update answer that arrives while the page is hidden releases the buttons");
 
-  // the bell turns this device's alerts on, and off again (it stayed disabled once on)
-  const bell = page.locator(".bell-button");
-  // before the permission question is answered the bell already reads as on: in-app alerts show
-  assert.equal(await bell.getAttribute("aria-label"), "Alerts on in the app only");
-  assert.equal(await bell.getAttribute("aria-pressed"), "true");
+  // the More menu's Alerts item turns this device's alerts on, and off again (it stayed disabled once on)
+  // the header has no button of its own for it, for New tab or for the file browser any more
+  assert.equal(await page.locator(".app-header .bell-button, .app-header .new-tab-button, .app-header .files-button").count(), 0, "the three actions are the More menu's items");
+  // before the permission question is answered the item already reads as on: in-app alerts show
+  assert.equal(await alertsState(page), "On in the app");
+  assert.equal(await alertsOffMarked(page), false, "alerts that are on leave the More button unmarked");
   await context.grantPermissions(["notifications"], { origin });
-  await bell.click();
-  await until(async () => await bell.getAttribute("aria-label") !== "Alerts on in the app only", "the bell's tap takes the permission");
-  assert.equal(await bell.getAttribute("aria-pressed"), "true");
-  await bell.click();
-  await until(async () => await bell.getAttribute("aria-pressed") === "false", "bell off");
-  assert.equal(await bell.getAttribute("aria-label"), "Alerts off");
+  await runMoreItem(page, "Alerts");
+  await until(async () => await alertsState(page) !== "On in the app", "the item's tap takes the permission");
+  assert.match(await alertsState(page), /^On[ ,]/);
+  assert.equal(await alertsOffMarked(page), false);
+  await runMoreItem(page, "Alerts");
+  await until(async () => await alertsState(page) === "Off on this device", "alerts off");
+  assert.equal(await alertsOffMarked(page), true, "alerts that are off mark the More button, in its dot and its name");
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("herdr-web-ui:settings") ?? "{}").alertsOn), false);
   assert.equal(await page.evaluate(async () => (await (await navigator.serviceWorker.getRegistration())?.pushManager.getSubscription()) ?? null), null, "turning alerts off drops the push subscription");
-  await bell.click();
-  await until(async () => await bell.getAttribute("aria-pressed") === "true", "bell on again");
-  console.log("PASS the bell turns alerts off and on again");
+  await runMoreItem(page, "Alerts");
+  await until(async () => /^On[ ,]/.test(await alertsState(page)), "alerts on again");
+  assert.equal(await alertsOffMarked(page), false);
+  console.log("PASS the Alerts item turns alerts off and on again");
 
-  // where notifications are blocked the bell is still there, and switches the in-app alerts
+  // where notifications are blocked the item is still there, and switches the in-app alerts
   const blocked = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   await blocked.addInitScript(() => {
     if (!localStorage.getItem("herdr-web-ui:settings")) localStorage.setItem("herdr-web-ui:settings", JSON.stringify({ language: "en" }));
@@ -323,19 +343,18 @@ try {
   });
   const blockedPage = await blocked.newPage();
   await blockedPage.goto(origin);
-  const blockedBell = blockedPage.locator(".bell-button");
-  await blockedBell.waitFor();
-  assert.equal(await blockedBell.getAttribute("aria-label"), "Alerts on in the app only");
-  assert.equal(await blockedBell.getAttribute("aria-pressed"), "true");
-  await blockedBell.click();
-  await until(async () => await blockedBell.getAttribute("aria-pressed") === "false", "blocked bell off");
-  assert.equal(await blockedBell.getAttribute("aria-label"), "Alerts off");
+  await blockedPage.locator(".header-more-button").waitFor();
+  assert.equal(await alertsState(blockedPage), "On in the app");
+  assert.equal(await alertsOffMarked(blockedPage), false);
+  await runMoreItem(blockedPage, "Alerts");
+  await until(async () => await alertsState(blockedPage) === "Off on this device", "blocked alerts off");
+  assert.equal(await alertsOffMarked(blockedPage), true);
   assert.equal(await blockedPage.evaluate(() => JSON.parse(localStorage.getItem("herdr-web-ui:settings") ?? "{}").alertsOn), false);
-  await blockedBell.click();
-  await until(async () => await blockedBell.getAttribute("aria-pressed") === "true", "blocked bell on again");
-  assert.equal(await blockedBell.getAttribute("aria-label"), "Alerts on in the app only");
+  await runMoreItem(blockedPage, "Alerts");
+  await until(async () => await alertsState(blockedPage) === "On in the app", "blocked alerts on again");
+  assert.equal(await alertsOffMarked(blockedPage), false);
   await blocked.close();
-  console.log("PASS a device that blocks notifications keeps the bell as the switch for in-app alerts");
+  console.log("PASS a device that blocks notifications keeps the Alerts item as the switch for in-app alerts");
 
   await checkPushSettings(browser, origin);
   await checkWakeLock(browser, origin, paneA);
@@ -349,6 +368,7 @@ try {
   await checkDefaultView(browser, origin);
   await checkComposerReconnect(browser, origin, paneB);
   await checkDroplet(browser, origin);
+  await checkTakeOver(browser, origin);
   await checkAlertSound(browser, origin);
   await checkChatKeepsTerminalSize(browser, origin);
   await checkPaneSwitchKeepsTerminalSize(browser, origin);
@@ -368,7 +388,69 @@ try {
     await page.getByRole("button", { name: "Queue message", exact: true }).click();
   }
   assert.equal(await page.locator(".composer-queue-text").count(), 3);
+  // Queue follows the draft: once the box is empty again, Stop is the one resting control
+  await page.getByRole("button", { name: "Queue message", exact: true }).waitFor({ state: "detached" });
+  assert.equal(await composer.inputValue(), "");
+  // the pressed Queue had the focus and is gone: the message box has it, not the page
+  assert.equal(await composer.evaluate((box) => box === document.activeElement), true, "focus goes to the message box when Queue leaves");
+  assert.equal(await page.getByRole("button", { name: "Stop agent", exact: true }).count(), 1);
+  assert.equal(await page.locator(".composer-action").count(), 1, "one round button");
+  // the held rows sit on the input card's column, under one caption that counts them
+  const heldBox = await page.locator(".composer-queue").boundingBox();
+  const cardBox = await page.locator(".composer-surface").boundingBox();
+  assert.ok(heldBox && cardBox);
+  assert.equal(Math.round(heldBox.x), Math.round(cardBox.x));
+  assert.equal(Math.round(heldBox.width), Math.round(cardBox.width));
+  assert.match(await page.locator(".composer-queue-heading").innerText(), /Held until the agent is ready · 3 messages/);
+  assert.equal(await page.locator(".composer-queue-toggle").count(), 0, "no prompt and no short phone: the rows are not folded");
   if (process.env.UI_EVIDENCE_DIR) await page.screenshot({ path: join(process.env.UI_EVIDENCE_DIR, "multiple-queue.png") });
+  // one column: the held list, the box and the conversation share their edges, and the status
+  // line is the box's own last row, inside it.
+  // The default Chat width follows the pane: min 820px, max 60rem (960px at this 16px root), 71% of the pane between. This
+  // pane is under 1148px, so the lane is its 820px floor, as at Narrow; at Wide the lane is wider
+  // than the pane and the column is the pane less its gutters. A larger window grows the lane
+  const chatWidth = async (name: string): Promise<void> => {
+    await page.keyboard.press("ControlOrMeta+Shift+Comma");
+    await page.getByRole("group", { name: "Chat width", exact: true }).getByRole("button", { name, exact: true }).click();
+    await page.getByRole("button", { name: "Close settings", exact: true }).click();
+  };
+  const laneColumn = async (): Promise<{ x: number; width: number; pane: number }> => {
+    const pane = await page.locator(".terminal-stack.is-chat").boundingBox();
+    const card = await page.locator(".composer-surface").boundingBox();
+    assert.ok(pane && card);
+    const [text, left, status, right] = await Promise.all([".composer-text", ".composer-controls-left", ".composer-status", ".composer-controls-right"]
+      .map((selector) => page.locator(`.composer-surface > ${selector}`).boundingBox()));
+    assert.ok(text && left && status && right, "the message box and the three cells of the controls row");
+    // each row spans the card's inner width: inside its hairline border, a fraction of a px either way
+    assert.ok(Math.abs(text.x - card.x) <= 2.5 && Math.abs(text.width - card.width) <= 4, `.composer-text spans the box: ${JSON.stringify({ text, card })}`);
+    // the status content is the middle cell of the last row: add on its left, the round button on its right, no gap between the cells
+    assert.ok(Math.abs(left.x - card.x) <= 2.5 && Math.abs(status.x - (left.x + left.width)) <= 1 && Math.abs(right.x - (status.x + status.width)) <= 1
+      && Math.abs(right.x + right.width - left.x - card.width) <= 4, `the controls row spans the box: ${JSON.stringify({ left, status, right, card })}`);
+    for (const selector of [".composer-queue", ".chat-transcript"]) {
+      const box = await page.locator(selector).boundingBox();
+      assert.ok(box, selector);
+      assert.equal(Math.round(box.x), Math.round(card.x), `${selector} starts on the box's edge`);
+      assert.equal(Math.round(box.width), Math.round(card.width), `${selector} is as wide as the box`);
+    }
+    return { x: Math.round(card.x), width: Math.round(card.width), pane: Math.round(pane.width) };
+  };
+  const floor = await laneColumn();
+  assert.ok(floor.pane < 1148, "71% of this pane is under the lane's floor");
+  assert.equal(floor.width, 820);
+  assert.ok(floor.width < floor.pane - 32, "the lane, not the pane, sets the column");
+  await chatWidth("Narrow");
+  assert.deepEqual(await laneColumn(), floor);
+  await chatWidth("Wide");
+  const gutters = await laneColumn();
+  assert.equal(gutters.width, gutters.pane - 32, "the wide lane is wider than this pane: the column is the pane less its gutters");
+  await chatWidth("Default");
+  assert.deepEqual(await laneColumn(), floor);
+  await page.setViewportSize({ width: 1920, height: 800 });
+  await until(async () => Math.round((await page.locator(".composer-surface").boundingBox())?.width ?? 0) === 960, "the default lane grows to its 960px ceiling on a large window");
+  assert.equal((await laneColumn()).width, 960);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await until(async () => Math.round((await page.locator(".composer-surface").boundingBox())?.width ?? 0) === 820, "the default lane returns to its floor");
+  assert.deepEqual(await laneColumn(), floor);
   await page.locator(".composer-queue-text").nth(1).fill("# edited second message");
   await page.reload();
   await page.locator(".conn-live").waitFor();
@@ -406,7 +488,7 @@ try {
   // a quick reply goes out as typed, and leaves a draft in the box alone; the row shows only when
   // chosen in Settings, and the box has no button for it
   const quickRow = async (show: boolean): Promise<void> => {
-    await page.keyboard.press("Control+Shift+Comma");
+    await page.keyboard.press("ControlOrMeta+Shift+Comma");
     const toggle = page.getByRole("switch", { name: "Show above the message box", exact: true });
     if ((await toggle.getAttribute("aria-checked")) !== String(show)) await toggle.click();
     await page.getByRole("button", { name: "Close settings", exact: true }).click();
@@ -414,12 +496,19 @@ try {
   assert.equal(await page.locator(".composer-quick").count(), 0);
   assert.equal(await page.locator(".composer-quick-toggle").count(), 0);
   await quickRow(true);
-  // on a wide pane the row keeps the box's column instead of running to the pane's left edge
+  // on a wide pane the row keeps the box's column instead of running to the pane's left edge.
+  // Measured at the narrow Chat width, where the lane is narrower than this pane at any window
+  // size: in a lane wider than the pane the row and the box would both simply fill the composer
+  // whatever their own width rule said
+  await chatWidth("Narrow");
   const quickBox = await page.locator(".composer-quick").boundingBox();
   const surfaceBox = await page.locator(".composer-surface").boundingBox();
-  assert.ok(quickBox && surfaceBox);
+  const composerBox = await page.locator(".composer").boundingBox();
+  assert.ok(quickBox && surfaceBox && composerBox);
+  assert.ok(surfaceBox.width < composerBox.width - 32, "the box is held to the lane, narrower than the pane");
   assert.equal(Math.round(quickBox.x), Math.round(surfaceBox.x));
   assert.equal(Math.round(quickBox.width), Math.round(surfaceBox.width));
+  await chatWidth("Default");
   await composer.fill("draft stays");
   const quickCount = inputs.length;
   await page.getByRole("group", { name: "Quick replies", exact: true }).getByRole("button", { name: "continue", exact: true }).click();
@@ -562,6 +651,7 @@ try {
   await page.getByRole("button", { name: /^New workspace on / }).click();
   const dialog = page.getByRole("dialog", { name: /^New workspace/ });
   await dialog.getByLabel(/^Directory/).fill(root);
+  await checkFolderFilter(page, dialog, () => createRequests);
   await dialog.getByLabel(/^Name/).fill("herdr-web-ui-test-browser-created");
   await dialog.getByRole("button", { name: "Start", exact: true }).click();
   await until(() => createRequests === 1, "creation started");
@@ -671,7 +761,7 @@ try {
 
   // A second tab from the row's ⋯ menu: the dialog is New tab, with the workspace's folder shown
   // and not asked for; the new pane opens, the workspace stays one row, and a strip over the pane
-  // lists both tabs from then on. The header's New tab opens the same dialog on a desktop.
+  // lists both tabs from then on. The header's More menu has New tab too, and opens the same dialog.
   // The new pane's terminal takes the focus once it paints, which would close a menu opened before.
   await until(() => painted.has(created.pane_id), "created pane paint");
   await page.locator(`.pane-select[title^="${created.pane_id} —"]`).click();
@@ -698,7 +788,7 @@ try {
   await until(async () => (await page.locator(`.pane-select[title^="${created.pane_id} —"]`).getAttribute("aria-current")) === "true", "the first tab opens its pane again");
   assert.equal(await strip.getByRole("tab", { selected: true }).textContent(), "Tab 1");
   // reopened right after a creation: its fields are live and Escape puts it away at once
-  await page.locator(".new-tab-button").click();
+  await runMoreItem(page, "New tab");
   await tabDialog.waitFor();
   assert.equal(await tabDialog.getByRole("button", { name: "Start", exact: true }).isDisabled(), false, "a reopened dialog is not left pending");
   await page.keyboard.press("Escape");
@@ -818,6 +908,12 @@ try {
   await page.locator('.composer-status[data-status="idle"]').waitFor();
   const startupPrompt = page.locator(".prompt-card");
   await startupPrompt.getByRole("button", { name: "1. Yes, continue", exact: true }).waitFor();
+  // the card is docked on the composer's column, directly over it, and is no part of the transcript
+  assert.deepEqual(await startupPrompt.evaluate((node) => ({
+    inTranscript: node.closest(".chat-view") !== null,
+    next: node.parentElement?.nextElementSibling?.classList.contains("composer") ?? false,
+    over: node.getBoundingClientRect().bottom <= document.querySelector(".composer-surface")!.getBoundingClientRect().top,
+  })), { inTranscript: false, next: true, over: true });
   assert.equal(await page.locator('.composer-status[data-status="idle"]').count(), 1);
   assert.equal(await page.locator(".chat-empty").count(), 0);
   await startupPrompt.getByRole("button", { name: "1. Yes, continue", exact: true }).click();
@@ -1114,7 +1210,7 @@ try {
   await securedContext.request.post(`${securedOrigin}/api/auth`, { data: { token: "browser-test-token" } });
   await securedPage.goto(`${securedOrigin}/?pane=${encodeURIComponent(securedWorkspace.root_pane.pane_id)}`);
   await securedPage.getByRole("button", { name: "Sign out", exact: true }).waitFor();
-  await securedPage.keyboard.press("Control+Shift+K");
+  await securedPage.keyboard.press("ControlOrMeta+Shift+K");
   await securedPage.getByRole("option", { name: "Sign out", exact: true }).waitFor();
   // Simulate a late terminal focus change: Escape must still dismiss the modal.
   await securedPage.getByRole("button", { name: "Sign out", exact: true }).focus();

@@ -6,7 +6,7 @@ import { createServer } from "./index.ts";
 import type { AgentKind, AgentStatus, ApiError, HealthAuth, PushKey, RemoteAccess, SessionSnapshot, PaneReadResult, UsageReport, WorkspaceCreated, WorktreeListing, WorktreeOpened, WorktreeRemoved } from "../shared/protocol.ts";
 import { HerdrUpdater } from "./herdr-update.ts";
 import type { HerdrUpdateStatus } from "../shared/update.ts";
-import { UsageService } from "./usage.ts";
+import { USAGE_PROVIDERS, UsageService } from "./usage.ts";
 import { VoiceService } from "./voice.ts";
 import { herdrRpc, ping, sessionSnapshot, tabCreate, workspaceCreate, workspaceClose } from "./herdr/client.ts";
 import { startFakePushService, type FakePushService } from "./push.fake.ts";
@@ -37,6 +37,40 @@ afterAll(() => {
 const base = () => `http://localhost:${server.port}`;
 
 describe("usage API", () => {
+  it("returns OpenCode Go windows without exposing its credential", async () => {
+    const usageState = mkdtempSync(join(tmpdir(), "herdr-opencode-contract-"));
+    const token = "oc_sk_contract_only";
+    const usage = new UsageService({
+      home: usageState, env: { OPENCODE_API_KEY: token }, platform: "linux", now: () => Date.parse("2026-10-06T00:00:00Z"),
+      keychain: async () => ({ status: "missing" }), run: async () => null,
+      fetch: async (url, init) => {
+        expect(url).toBe("https://opencode.ai/zen/go/v1/usage");
+        expect(new Headers(init.headers).get("authorization")).toBe(`Bearer ${token}`);
+        return Response.json({ usage: {
+          rolling: { percent: 12, resetsAt: "2026-10-06T01:00:00Z" },
+          weekly: { percent: 34 }, monthly: { percent: 56 },
+        } });
+      },
+    }, USAGE_PROVIDERS.filter((provider) => provider.id === "opencode"));
+    const app = createServer({ port: 0, stateDir: usageState, usage, token: "report-token" });
+    try {
+      const url = `http://localhost:${app.port}/api/usage`;
+      expect((await fetch(url)).status).toBe(401);
+      const response = await fetch(url, { headers: { authorization: "Bearer report-token" } });
+      expect(response.status).toBe(200);
+      const body = await response.text();
+      expect(body).not.toContain(token);
+      expect(body).not.toContain(usageState);
+      expect((JSON.parse(body) as UsageReport).providers).toMatchObject([{
+        id: "opencode", account: null, plan: "Go", problem: null,
+        windows: [
+          { kind: "session", used_percent: 12, resets_at: "2026-10-06T01:00:00.000Z" },
+          { kind: "week", used_percent: 34 }, { kind: "month", used_percent: 56 },
+        ],
+      }]);
+    } finally { app.stop(); rmSync(usageState, { recursive: true, force: true }); }
+  });
+
   it("answers the report and keeps it behind the token gate", async () => {
     const usageState = mkdtempSync(join(tmpdir(), "herdr-usage-auth-"));
     const usage = new UsageService(undefined, []);
@@ -1055,7 +1089,11 @@ class RecordingSocket {
     const already = this.seen.find(predicate);
     if (already) return Promise.resolve(already);
     return new Promise<RecordedFrame>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`${label} not received within ${ms}ms`)), ms);
+      const timer = setTimeout(() => {
+        // what did arrive: without it a timeout cannot tell a lost frame from one that came differently
+        console.error(`${label}: the last frames received were\n${this.seen.slice(-20).map((frame) => JSON.stringify(frame).slice(0, 300)).join("\n")}`);
+        reject(new Error(`${label} not received within ${ms}ms`));
+      }, ms);
       const listener = (event: MessageEvent) => {
         const message = JSON.parse(String(event.data)) as RecordedFrame;
         if (!predicate(message)) return;
@@ -1216,8 +1254,12 @@ describe("WebSocket roles and status push", () => {
       // the terminal lens's grid is the pty's, not the pane's own one the covered attach left it at
       expect(await phone.waitFor((m) => m.type === "pane-geometry" && m.pane_id === paneId && m.cols === 91, "the resize applied after creation", 15_000)).toMatchObject({ cols: 91, rows: 27 });
       await phone.waitFor((m) => m.type === "input-ready" && m.pane_id === paneId, "attach took", 15_000);
-      phone.send({ type: "input", pane_id: paneId, text: "clear; echo size=$(stty size)\r" });
-      await phone.waitFor((m) => m.type === "pty-data" && m.pane_id === paneId && String(m.data).includes("size=27 91"), "the shell sees the terminal lens's grid", 15_000);
+      // one word, "27x91": herdr may draw a space as a cursor move, and "size=27 91" then never arrives as such
+      const from = phone.seen.length;
+      phone.send({ type: "input", pane_id: paneId, text: "clear; echo size=$(stty size | tr ' ' x)\r" });
+      // over every frame since the command: a read may end in the middle of the word
+      const output = () => phone.seen.slice(from).filter((m) => m.type === "pty-data" && m.pane_id === paneId).map((m) => String(m.data)).join("");
+      await phone.waitFor((m) => m.type === "pty-data" && m.pane_id === paneId && output().includes("size=27x91"), "the shell sees the terminal lens's grid", 15_000);
     } finally {
       phone.close();
       await workspaceClose(created.workspace.workspace_id).catch(() => undefined);

@@ -130,8 +130,8 @@ Every agent herdr runs shows up with its live status, terminal and alerts. The c
 
 | Agent | Chat | Answer prompts from chat |
 | --- | --- | --- |
-| **Claude Code** | Native transcript, resolved through herdr | ✓ approvals, questions, plan and menu picks |
-| **Codex** | Native rollout, with tool results and commentary/final phases | ✓ approvals and questions, including queued ones |
+| **Claude Code** | Native transcript, resolved through herdr | ✓ approvals, questions, plan and menu picks, and the `/model` list (picked for the session) |
+| **Codex** | Native rollout, with tool results and commentary/final phases | ✓ approvals and questions, including queued ones, and the `/model` lists (picked for the session) |
 | **omp** | Native session file | ✓ |
 | **omo** | Native session file, found through the pane's process tree | — use Terminal |
 | **gjc** | Native session file, from the session directory gjc keeps open | — use Terminal |
@@ -160,10 +160,10 @@ running llama.cpp server that this app cannot ask. The model and reasoning effor
 | **Follow the plan** | A supported todo-tool call folds into the turn's work block like any tool: it reads as the done count or the step it took, and opened, as the whole list by phase. |
 | **Drop into the real terminal** | xterm.js on the live pane: full-screen TUIs, raw keys and herdr's scrollback, shared with your own herdr TUI. Drag to select and it is copied on release; the wheel or the screen's edge scrolls further back while you drag. Ctrl+C copies a selection instead of interrupting. |
 | **Answer prompts** | Approval, question and plan menus become cards. Tap an option, or type its number in the composer. The server checks that the menu is still current before answering. |
-| **Compose** | `/` commands and `@` file mentions, any file or image attached by path, a draft per pane, and multiple queued messages while the agent works. |
+| **Compose** | `/` commands and `@` file mentions, any file or image up to 8 MB attached by path, a draft per pane, and multiple queued messages while the agent works. |
 | **Follow every agent** | Live RUN / INPUT / DONE / READY status for all panes, and alerts when an agent needs input, finishes or its terminal ends. |
 | **Open what agents make** | A file path in an answer opens in a viewer (images, video, audio, PDF, text), or find it with **Browse files**, and download it to your phone. |
-| **Manage sessions** | Start an agent in a folder you type or pick with **Browse**, add a tab to a workspace (as herdr's prefix+c) and switch tabs from the strip over the pane, rename workspaces and panes, reorder workspaces, and jump anywhere from the command palette. |
+| **Manage sessions** | Start an agent in a folder you type or pick with **Browse**. In New workspace, Browse filters the currently loaded folders as you type (case-insensitive); open a result, then choose **Use this folder**. It does not search subfolders or folders beyond the displayed 500. Add a tab to a workspace (as herdr's prefix+c), switch tabs from the strip over the pane, rename workspaces and panes, reorder workspaces, and jump anywhere from the command palette. |
 | **Speak instead of typing** | A mic beside Attach in the composer and beside Send in the terminal input line. Hold to talk or tap twice; the words land at the caret and are never sent by themselves. See [Voice input](#voice-input). |
 | **Watch your plan limits** | Beside Settings, how much of each AI subscription signed in on the PC is used, or what is left: the week's or the session's limit per account, and every limit with its reset time on a tap. See [Subscription usage](#subscription-usage). |
 | **Make it yours** | English, Korean, Japanese or Simplified Chinese, following the browser or chosen in Settings. Dark, light or system theme, compact density, terminal and chat font sizes, a resizable composer, Enter behavior and thinking visibility. |
@@ -180,6 +180,7 @@ The strip beside **Settings** shows the plan limits of the AI tools signed in on
 | Copilot | `~/.config/github-copilot/apps.json` or `hosts.json`, then every account the GitHub CLI holds (`gh auth status`): per GitHub login, the first token that finds a plan |
 | Grok | Every account in `~/.grok/auth.json` |
 | Antigravity | The macOS keychain item Antigravity signs in with (Gemini and other-model quota) |
+| OpenCode | OpenCode Go: the `opencode-go` key, else the `opencode` key, in `~/.local/share/opencode/auth.json` (`opencode/auth.json` under `XDG_DATA_HOME` when it is set), else `OPENCODE_API_KEY`. Its rolling, weekly and monthly limits; a key without a Go subscription is left out |
 
 Only providers with a sign-in are shown; a GitHub account without Copilot is left out. One PC signed in to two accounts of a provider shows both, each named by its email (a login for Copilot) and told apart by its account id, so the same account found in two places counts once. A credential file, a command's output or a provider's answer over 1 MiB is treated as unreadable. Where each sign-in lives and which endpoint states its limits follows [OpenUsage](https://github.com/robinebers/openusage).
 
@@ -215,14 +216,16 @@ Only devices in your tailnet can open that address, and only yours get in withou
 
 1. Open the address.
 2. Install the app: in Safari, choose **Share → Add to Home Screen**; in Chrome, choose **Install app**.
-3. Tap the bell to turn on alerts for that device. iPhone needs iOS 16.4+ and the home-screen app.
+3. Open the **⋯** menu at the top right and tap **Alerts** to turn on alerts for that device. iPhone needs iOS 16.4+ and the home-screen app.
 
 To check alerts later, choose **Settings → Alerts → Send test**. The result tells you
 whether the test was sent or failed; a missing subscription offers **Turn alerts on again**.
 
 On a phone:
 - Agent panes open in the chat.
-- The terminal gets a key bar above the keyboard (Esc, Tab, Ctrl, arrows, Ctrl+C).
+- The terminal gets a key bar above the keyboard (Esc, Tab, Ctrl, Alt, arrows, Ctrl+C).
+  **Settings → Appearance → Key bar** adds or removes Alt, Shift+Tab, Home/End, PgUp/PgDn,
+  Ctrl+D, Ctrl+Z, `|`, `~` and `/`.
 - Dragging the terminal scrolls the real herdr pane.
 - **Settings → Phone → Keep screen on** keeps the screen awake while a terminal or chat
   pane is open. It is off by default, releases when the app is hidden, and resumes when
@@ -335,7 +338,10 @@ Nothing is typed without you:
 - Queued messages stay with their PC and pane across reloads. Edit, discard, or explicitly send each item; status changes and reconnects never send them automatically.
 - An answer typed to a prompt waits for **Confirm**.
 
-Attaches never use `--takeover`, so they coexist with your own herdr TUI.
+Attaches and reconnects wait when another client holds the terminal. **Open here** on the waiting
+notice explicitly takes that pane with `--takeover`: the other web bridge waits in turn, while a
+standalone `herdr terminal attach` exits. The herdr TUI stays connected (verified on herdr 0.9.3).
+Observe connections cannot take a pane, and a displaced bridge never takes it back automatically.
 
 ## Configuration
 
@@ -442,15 +448,27 @@ No, but a phone needs two things Tailscale gives at once: a way to reach the PC 
 <details>
 <summary><b>Does my code or conversation leave my machine?</b></summary>
 
-No. The server reads session files and terminals locally, and serves them only to browsers that can reach it. Its only outbound connections are:
-- GitHub, for release checks, update builds and remote-PC bundles
-- your browser vendor's push service, for alerts, which carries an encrypted notification
+Session files stay on the PC running each agent, and their contents are sent to browsers connected to the app. herdr web ui has no hosted relay or account service of its own. The agents' own connections to model providers depend on their configuration.
+
+Optional features can send data off the PC:
+- [Voice input](#voice-input) sends recordings to the configured transcription provider; polishing also sends the transcribed text. Without a configured API key, browser speech recognition may use the browser vendor's service.
+- [Subscription usage](#subscription-usage), when enabled, sends each provider's credentials to that provider's usage endpoint.
+- Updates and remote-PC setup fetch releases or configured runtime bundles over the network; remote panes are reached over SSH.
+- Enabled push alerts go through the browser vendor's push service as encrypted notifications.
+
+See [Access and safety](#access-and-safety) for who can connect to the app.
 </details>
 
 <details>
 <summary><b>An agent is missing from the chat, or shows only terminal text.</b></summary>
 
 The chat needs the agent's own session file. Check that the agent runs in a herdr pane on this PC (or on an added PC) and has already written its first message. Agents without a native reader always get the terminal-text view, and the Terminal view always works.
+</details>
+
+<details>
+<summary><b>The colors look too dark, or the light theme looks dark, in Samsung Internet.</b></summary>
+
+Samsung Internet has a forced dark mode that repaints every page, including one that brings its own light and dark themes, as this app does. A light theme comes out dark, and a dark one is darkened a second time: similar shades run together, and the bars of the plan meters can look empty. Turn off **Force dark mode for web content** (**웹 콘텐츠에 어두운 화면 모드 강제 적용**) in Samsung Internet's settings, or open the app in Chrome. Reported on a Galaxy Tab S7+ ([#451](https://github.com/devswha/herdr-web-ui/issues/451)).
 </details>
 
 <details>
