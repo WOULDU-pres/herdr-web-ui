@@ -7,6 +7,11 @@ between releases do not reach them. Remote-PC runtime bundles are versioned sepa
 
 ## [Unreleased]
 
+### Changed
+- The tab strip stays over the pane when the workspace has a single tab: the tab's name shows,
+  it is renamed and closed there, and the strip's `+` adds a second one. The pane no longer
+  changes height by the strip's as a second tab opens or the last but one closes.
+
 ## [0.4.3] - 2026-10-09
 
 ### Fixed

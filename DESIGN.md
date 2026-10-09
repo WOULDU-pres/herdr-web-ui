@@ -561,8 +561,8 @@ One set for both themes: the card is island black wherever it shows.
   herdr gives it). Submit calls `POST /api/tab/create` with the same agent launch.
 
 ### Tab strip (`.tab-strip`)
-- herdr's tab row, over the pane: shown once the selected pane's workspace has more than one
-  pane (a second tab, or a tab split in the TUI), never for a lone pane. One `role="tab"` per tab
+- herdr's tab row, over the pane: shown for the selected pane's workspace whether it has one
+  tab or several, so the pane keeps its height as tabs open and close. One `role="tab"` per tab
   in herdr's order, named by its label, or **Tab n** while herdr still names it by its number;
   a 7px dot before the name in the state's colour for working, blocked and done. The open tab
   (the selected pane's) is underlined 2px in `--accent` and in the strong colour; the others are

@@ -1,6 +1,6 @@
 /**
- * The tabs of the selected pane's workspace, above its pane, as herdr's own tab row: shown once
- * the workspace has more than one pane (a second tab, or a tab split in the TUI), with a `+`
+ * The tabs of the selected pane's workspace, above its pane, as herdr's own tab row: shown for a
+ * workspace's one tab as for several, so the pane does not move as tabs come and go, with a `+`
  * that opens the New tab dialog. A tab opens the pane last viewed in it, else the one herdr has
  * focused there, else its first. The app shows one pane at a time, so a tab with several panes
  * carries a picker of them beside its name.
@@ -86,16 +86,18 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
     strip.current?.querySelector<HTMLElement>(`[role="tab"][data-tab-id="${CSS.escape(refocus.current)}"]`)?.focus();
     refocus.current = null;
   }, [editing]);
-  // once the snapshot has lost a closed tab, the focus it held goes to the tab beside it, or,
-  // when the strip went with it (one pane left), where a closed row's focus goes
+  // once the snapshot has lost a closed tab, the focus it held goes to the tab beside it, else to
+  // the open tab (the one beside was closed too, before a snapshot showed it), or, when the strip
+  // went with them, where a closed row's focus goes
   useLayoutEffect(() => {
     const was = closed.current;
     if (!was || tabs.some((tab) => tab.tab_id === was.tabId)) return;
     closed.current = null;
     const active = document.activeElement;
     if (active && active !== document.body && !strip.current?.contains(active)) return;
-    const beside = strip.current?.querySelector<HTMLElement>(`[role="tab"][data-tab-id="${CSS.escape(was.beside)}"]`);
-    if (beside) beside.focus(); else focusWorkspaceListToggle();
+    const next = strip.current?.querySelector<HTMLElement>(`[role="tab"][data-tab-id="${CSS.escape(was.beside)}"]`)
+      ?? strip.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    if (next) next.focus(); else focusWorkspaceListToggle();
   });
   // a name herdr never showed back (renamed again elsewhere) does not stay on the tab
   useEffect(() => {
@@ -111,7 +113,9 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
 
   // the open tab is in view: a pane opened from the sidebar, the palette or an alert can be on a
   // tab scrolled out of a phone's strip. Only the strip scrolls, never the page around it.
-  const shown = panes.length >= 2;
+  // a lone tab has its strip too; a snapshot that lists no tab of the workspace would leave a
+  // strip of a `+` alone
+  const shown = tabs.length > 0;
   const scroll = useRef<StripScroll>(STRIP_AT_REST);
   const bringOpenTab = (): void => {
     const row = strip.current;
