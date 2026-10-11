@@ -9,14 +9,18 @@ import { agentContext, agentTabName, groupRows, paneMark, sidebarAgents, type Si
 import { useSettings } from "../lib/settings.ts";
 import { useSidebarActivity } from "../lib/sidebarActivity.tsx";
 import { activityOrder } from "../lib/sidebarOrder.ts";
-import { AgentMark } from "./AgentMark.tsx";
+import { AgentMark, hasAgentMark } from "./AgentMark.tsx";
 import { BackgroundBadge, displayPaneTitle, StatusBadge } from "./Sidebar.tsx";
 import "./AgentSidebar.css";
 
 interface AgentRowBodyProps {
   /** the agent's kind or name; null draws a terminal, for a shell */
   mark: string | null;
+  /** the kind the mark draws, left off the second line: said for a screen reader, since the mark is aria-hidden */
+  markKind: string | null;
   title: string;
+  /** the live name other tools address the agent by, when it has one */
+  name: string | null;
   context: string;
   backgroundTasks?: number;
   status?: AgentStatus;
@@ -26,12 +30,17 @@ interface AgentRowBodyProps {
  * One agent in a list: the coding agent's mark, what it is working on, who and where it is, and
  * how it is doing.
  */
-function AgentRowBody({ mark, title, context, backgroundTasks, status }: AgentRowBodyProps) {
+function AgentRowBody({ mark, markKind, title, name, context, backgroundTasks, status }: AgentRowBodyProps) {
   return <>
     <span className="sidebar-mark" aria-hidden="true">{mark !== null ? <AgentMark agent={mark} size={18} /> : <Terminal />}</span>
     <span className="agent-copy">
+      {markKind && <span className="visually-hidden">{markKind}: </span>}
       <span className="agent-title">{title}</span>
-      {context && <span className="agent-context">{context}</span>}
+      {(name || context) && <span className="agent-context">
+        {name && <span className="agent-name">{name}</span>}
+        {name && context && " · "}
+        {context}
+      </span>}
     </span>
     <span className="agent-row-status"><BackgroundBadge count={backgroundTasks} /><StatusBadge status={status} compact /></span>
   </>;
@@ -78,16 +87,24 @@ export function AgentSidebar({ machines, selectedMachineId, selectedPaneId, stat
     const selected = machine.id === selectedMachineId && pane.pane_id === selectedPaneId;
     const online = machine.state === "connected";
     const title = pane.label?.trim() || agent?.title?.trim() || pane.title?.trim() || displayPaneTitle(pane);
+    const name = agent?.name?.trim() || null;
+    // the name has its own place on the line: the label beside it says the kind instead
+    const kindLabel = name !== null && agentLabel === name ? entry.canonicalAgent ?? agent?.title?.trim() ?? null : agentLabel;
     const tabs = machine.snapshot?.tabs.filter((candidate) => candidate.workspace_id === workspace.workspace_id) ?? [];
-    const parts = { agentLabel, title, machineName: machineName(machine), workspaceLabel: workspace.label, tabName: agentTabName(tab, tabs, t) };
+    const mark = paneMark(entry);
+    const markAgent = mark && hasAgentMark(mark) ? mark : null;
+    const parts = { agentLabel: kindLabel, title, markAgent, machineName: machineName(machine), workspaceLabel: workspace.label, tabName: agentTabName(tab, tabs, t) };
     // a row in a card leaves its place to the card's head; the tooltip still says all of it
     const place = agentContext(parts).join(" · ");
-    const context = grouped ? agentContext({ ...parts, grouped }).join(" · ") : place;
-    const tooltip = [...new Set([pane.pane_id, title, place, agent?.name, agent?.display_agent, pane.cwd, online ? null : stateWord(machine)].filter(Boolean))].join("\n");
+    const contextParts = agentContext({ ...parts, grouped });
+    const context = contextParts.join(" · ");
+    const kind = kindLabel?.trim() || null;
+    const markKind = kind && kind !== title.trim() && !contextParts.includes(kind) ? kind : null;
+    const tooltip = [...new Set([pane.pane_id, title, place, markKind, name, agent?.display_agent, pane.cwd, online ? null : stateWord(machine)].filter(Boolean))].join("\n");
     return <li className={`agent-item${selected ? " is-selected" : ""}${online ? "" : " is-offline"}`} key={paneStorageId(machine.id, pane.pane_id)} data-machine={machine.id} data-pane={pane.pane_id}>
       <button type="button" className="agent-select agent-row" disabled={!online} aria-current={selected ? "true" : undefined} title={tooltip} onClick={() => onSelect(machine.id, pane.pane_id)}>
         {/* a saved roster's state is not news: a PC that is away says nothing about its agents */}
-        <AgentRowBody mark={paneMark(entry)} title={title} context={context} backgroundTasks={online ? pane.background_tasks : 0} status={online ? activity.status(machine.id, pane) : undefined} />
+        <AgentRowBody mark={mark} markKind={markKind} title={title} name={name} context={context} backgroundTasks={online ? pane.background_tasks : 0} status={online ? activity.status(machine.id, pane) : undefined} />
       </button>
     </li>;
   };
