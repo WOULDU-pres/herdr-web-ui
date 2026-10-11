@@ -552,7 +552,7 @@ One set for both themes: the card is island black wherever it shows.
   leaves the PC and the workspace out of its dim line (`agentContext` with `grouped`); its tooltip
   still names them, and the card's list is labelled by its head for screen readers. A row in a card
   with nothing else to say (no live name, no tab of its own) says its kind there, even the one its
-  mark draws, rather than leave the line empty. The head of
+  mark or title already says, rather than leave the line empty. The head of
   a disconnected PC's card dims with its rows. **Activity** mixes workspaces, so it draws no cards
   and every row names its own place. Pinned agents, when the list has them, sit in their own
   section above the cards, and a pinned row is not repeated in its workspace's card.

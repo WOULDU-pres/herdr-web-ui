@@ -119,8 +119,8 @@ export function agentContext({ agentLabel, title, markAgent, machineName, worksp
     grouped ? null : workspaceLabel,
     tab && tab !== workspaceLabel ? tab : null,
   ].filter((part): part is string => Boolean(part));
-  // a row in a card would be left with no second line: it says the kind its mark draws
-  return grouped && !named && parts.length === 0 && agent && agent !== title.trim() ? [agent] : parts;
+  // a row in a card would be left with no second line: it says its kind, even one its mark or title says
+  return grouped && !named && parts.length === 0 && agent ? [agent] : parts;
 }
 
 /**
