@@ -96,7 +96,7 @@ export function AgentSidebar({ machines, selectedMachineId, selectedPaneId, stat
     const parts = { agentLabel: kindLabel, title, markAgent, machineName: machineName(machine), workspaceLabel: workspace.label, tabName: agentTabName(tab, tabs, t) };
     // a row in a card leaves its place to the card's head; the tooltip still says all of it
     const place = agentContext(parts).join(" · ");
-    const contextParts = agentContext({ ...parts, grouped });
+    const contextParts = agentContext({ ...parts, grouped, named: name !== null });
     const context = contextParts.join(" · ");
     const kind = kindLabel?.trim() || null;
     const markKind = kind && kind !== title.trim() && !contextParts.includes(kind) ? kind : null;

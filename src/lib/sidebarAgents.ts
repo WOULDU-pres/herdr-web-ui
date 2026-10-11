@@ -105,18 +105,22 @@ export interface AgentContextParts {
   tabName: string | null;
   /** the row sits under a head that names its PC and workspace, so the line leaves them to it */
   grouped?: boolean;
+  /** the row's live name already fills its line */
+  named?: boolean;
 }
 
 /** An agent row's second line: who it is, then where it runs, without repeating a word the row already says. */
-export function agentContext({ agentLabel, title, markAgent, machineName, workspaceLabel, tabName, grouped = false }: AgentContextParts): string[] {
+export function agentContext({ agentLabel, title, markAgent, machineName, workspaceLabel, tabName, grouped = false, named = false }: AgentContextParts): string[] {
   const agent = nonblank(agentLabel);
   const tab = nonblank(tabName);
-  return [
+  const parts = [
     agent && agent !== title.trim() && agent.toLowerCase() !== markAgent?.toLowerCase() ? agent : null,
     grouped ? null : nonblank(machineName),
     grouped ? null : workspaceLabel,
     tab && tab !== workspaceLabel ? tab : null,
   ].filter((part): part is string => Boolean(part));
+  // a row in a card would be left with no second line: it says the kind its mark draws
+  return grouped && !named && parts.length === 0 && agent && agent !== title.trim() ? [agent] : parts;
 }
 
 /**

@@ -136,6 +136,15 @@ describe("agentContext", () => {
     expect(agentContext({ ...grouped, tabName: "checkout-api" })).toEqual(["claude"]);
     expect(agentContext({ ...grouped, title: "claude" })).toEqual([]);
   });
+
+  it("says the kind its mark draws when a card would leave the row no second line", () => {
+    const grouped = { ...base, markAgent: "claude", grouped: true };
+    expect(agentContext(grouped)).toEqual(["claude"]);
+    expect(agentContext({ ...grouped, tabName: "Review" })).toEqual(["Review"]);
+    expect(agentContext({ ...grouped, named: true })).toEqual([]);
+    expect(agentContext({ ...grouped, title: "claude" })).toEqual([]);
+    expect(agentContext({ ...base, markAgent: "claude" })).toEqual(["checkout-api"]);
+  });
 });
 
 describe("groupRows", () => {
