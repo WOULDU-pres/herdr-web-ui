@@ -149,7 +149,8 @@ try {
         // leaves the workspace to the card, its tooltip and the list's label keep it
         assert.deepEqual(await page.locator(".agents-sidebar .agent-group-name").allTextContents(), ["checkout-api", "web-dashboard", "infra", "docs-site", "cli-tools"]);
         const apiRow = agent(page, API);
-        assert.doesNotMatch(await apiRow.locator(".agent-context").textContent() ?? "", /checkout-api/, "a row in a card leaves its workspace to the card");
+        // the line can be gone: the mark already says the kind, and the card the workspace
+        assert.doesNotMatch((await apiRow.locator(".agent-context").allTextContents()).join(""), /checkout-api/, "a row in a card leaves its workspace to the card");
         assert.match(await apiRow.locator(".agent-select").getAttribute("title") ?? "", /checkout-api/, "the tooltip still names the workspace");
         const labelledBy = await page.locator(".agents-sidebar .agent-group-rows", { has: page.locator(".agent-title", { hasText: API }) }).getAttribute("aria-labelledby");
         assert.equal(await page.locator(`[id="${labelledBy}"]`).textContent(), "checkout-api", "the card's rows are labelled by its head");
